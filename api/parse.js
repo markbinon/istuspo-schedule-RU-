@@ -294,57 +294,25 @@ const extractJson = (text) => {
 // Один запрос к выбранному провайдеру; structured=true включает режим «строго JSON» там, где он есть
 async function callModel(image, mt, extra, structured) {
   const prompt = extra ? `${PROMPT}\n${extra}` : PROMPT;
-  if (process.env.OPENAI_API_KEY) {
-    const body = {
-      model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-      max_completion_tokens: 6000,
-      temperature: 0,
-      messages: [{ role: 'user', content: [
-        { type: 'text', text: prompt },
-        { type: 'image_url', image_url: { url: `data:${mt};base64,${image}`, detail: 'high' } },
-      ] }],
-    };
-    if (structured) body.response_format = { type: 'json_object' };
-    const r = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
-      body: JSON.stringify(body),
-    });
-    const data = await r.json();
-    return { ok: r.ok, status: r.status, error: data.error?.message || 'Ошибка OpenAI API', text: data.choices?.[0]?.message?.content || '' };
+  if (!process.env.GEMINI_API_KEY) {
+    return { ok: false, status: 401, error: 'Не задан GEMINI_API_KEY', text: '' };
   }
-  if (process.env.GEMINI_API_KEY) {
-    const model = process.env.GEMINI_MODEL || 'gemini-4-hydrogen';
-    const generationConfig = { temperature: 0, maxOutputTokens: 16000 };
-    if (structured) {
-      generationConfig.responseMimeType = 'application/json';
-      generationConfig.responseSchema = { type: 'array', items: ROW_SCHEMA };
-    }
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-goog-api-key': process.env.GEMINI_API_KEY },
-      body: JSON.stringify({
-        contents: [{ parts: [{ inlineData: { mimeType: mt, data: image } }, { text: prompt }] }],
-        generationConfig,
-      }),
-    });
-    const data = await r.json();
-    return { ok: r.ok, status: r.status, error: data.error?.message || 'Ошибка Gemini API', text: (data.candidates?.[0]?.content?.parts || []).map((p) => p.text || '').join('') };
+  const model = process.env.GEMINI_MODEL || 'gemini-4-hydrogen';
+  const generationConfig = { temperature: 0, maxOutputTokens: 16000 };
+  if (structured) {
+    generationConfig.responseMimeType = 'application/json';
+    generationConfig.responseSchema = { type: 'array', items: ROW_SCHEMA };
   }
-  const r = await fetch('https://api.anthropic.com/v1/messages', {
+  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+    headers: { 'content-type': 'application/json', 'x-goog-api-key': process.env.GEMINI_API_KEY },
     body: JSON.stringify({
-      model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5',
-      max_tokens: 8000,
-      messages: [{ role: 'user', content: [
-        { type: 'image', source: { type: 'base64', media_type: mt, data: image } },
-        { type: 'text', text: prompt },
-      ] }],
+      contents: [{ parts: [{ inlineData: { mimeType: mt, data: image } }, { text: prompt }] }],
+      generationConfig,
     }),
   });
   const data = await r.json();
-  return { ok: r.ok, status: r.status, error: data.error?.message || 'Ошибка API', text: (data.content || []).map((b) => b.text || '').join('') };
+  return { ok: r.ok, status: r.status, error: data.error?.message || 'Ошибка Gemini API', text: (data.candidates?.[0]?.content?.parts || []).map((p) => p.text || '').join('') };
 }
 
 // До 3 попыток: при сбое сети/лимите (429, 5xx) — пауза и повтор; при плохом JSON — повтор с напоминанием;
