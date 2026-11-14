@@ -314,7 +314,7 @@ async function callModel(image, mt, extra, structured) {
     return { ok: r.ok, status: r.status, error: data.error?.message || 'Ошибка OpenAI API', text: data.choices?.[0]?.message?.content || '' };
   }
   if (process.env.GEMINI_API_KEY) {
-    const model = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+    const model = process.env.GEMINI_MODEL || 'gemini-4-hydrogen';
     const generationConfig = { temperature: 0, maxOutputTokens: 16000 };
     if (structured) {
       generationConfig.responseMimeType = 'application/json';
