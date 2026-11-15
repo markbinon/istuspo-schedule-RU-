@@ -301,7 +301,7 @@ async function callModel(image, mt, extra, structured) {
     };
   }
 
-  const model = process.env.GEMINI_MODEL || 'gemini-4-hydrogen';
+  const model = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
   const generationConfig = {
     temperature: 0,
     maxOutputTokens: 16000
