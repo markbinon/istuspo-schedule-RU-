@@ -22,22 +22,38 @@ app.get('/api/parse', (req, res) => {
 });
 
 // Основной маршрут распознавания фотографий
-app.post('/api/parse', async (req, res, next) => {
-  console.log('[PARSE] POST request received');
+
+app.post('/api/parse', async (req, res) => {
+  console.log('[PARSE TEST] POST RECEIVED');
 
   try {
+    console.log('[PARSE TEST] Body received');
+
+    if (!req.body) {
+      return res.status(400).json({
+        stage: 'body',
+        error: 'Request body is empty'
+      });
+    }
+
+    console.log('[PARSE TEST] Calling parse.js');
+
     await parse(req, res);
+
+    console.log('[PARSE TEST] parse.js finished');
+
   } catch (error) {
-    console.error('[PARSE] Handler error:', error);
+    console.error('[PARSE TEST] ERROR:', error);
 
     if (!res.headersSent) {
-      res.status(500).json({
-        error: 'Ошибка обработчика распознавания',
-        details: error.message
+      return res.status(500).json({
+        stage: 'express_handler',
+        error: error.message || String(error)
       });
     }
   }
 });
+
 
 // Остальные API
 app.all('/api/replacements', replacements);
