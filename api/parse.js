@@ -1,5 +1,8 @@
-
 const { authed } = require('./_store');
+
+// Куда стучаться: напрямую в Google или через ваш релей за границей.
+// Задайте GEMINI_BASE_URL в переменных окружения Layero (адрес воркера).
+const API_BASE = (process.env.GEMINI_BASE_URL || 'https://generativelanguage.googleapis.com').replace(/\/+$/, '');
 
 // Название группы из таблицы -> id группы на сайте
 const GROUPS = {
@@ -315,14 +318,20 @@ async function callModel(image, mt, extra, structured) {
     };
   }
 
+  // Через релей (GEMINI_BASE_URL) или напрямую в Google.
+  const reqHeaders = {
+    'content-type': 'application/json',
+    'x-goog-api-key': process.env.GEMINI_API_KEY
+  };
+  if (process.env.GEMINI_RELAY_TOKEN) {
+    reqHeaders['x-relay-token'] = process.env.GEMINI_RELAY_TOKEN;
+  }
+
   const r = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+    `${API_BASE}/v1beta/models/${model}:generateContent`,
     {
       method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-goog-api-key': process.env.GEMINI_API_KEY
-      },
+      headers: reqHeaders,
       body: JSON.stringify({
         contents: [{
           parts: [
