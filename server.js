@@ -1,5 +1,7 @@
 
 const express = require('express');
+const { randomUUID, createHash } = require('node:crypto');
+const { authed } = require('./api/_store');
 
 console.log('[START] Starting application...');
 console.log('[START] Node:', process.version);
@@ -71,8 +73,85 @@ app.get('/api/parse', (req, res) => {
   });
 });
 
-// Распознавание фотографий
+// Список из того же справочника, который использует распознавание.
+app.get('/api/parse/groups', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  if (!authed(req)) return res.status(401).json({ error: 'Неверный пароль' });
+  return res.json({ groups: parse.groups });
+});
+
+// Короткие HTTP-запросы вместо ожидания Gemini за прокси с лимитом ~60 с.
+// Задачи хранятся в памяти одного Node-процесса и исчезают при перезапуске.
+const parseJobs = new Map();
+const JOB_TTL_MS = 10 * 60 * 1000;
+function pruneJobs() {
+  for (const [id, job] of parseJobs) {
+    if (job.state === 'done' && Date.now() - job.finishedAt > JOB_TTL_MS) {
+      parseJobs.delete(id);
+    }
+  }
+}
+
+app.get('/api/parse/jobs/:id', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  if (!authed(req)) return res.status(401).json({ error: 'Неверный пароль' });
+  pruneJobs();
+  const job = parseJobs.get(req.params.id);
+  if (!job) {
+    return res.status(404).json({ error: 'Задача потеряна: сервер перезапустился или результат устарел. Запустите распознавание заново.' });
+  }
+  if (job.state !== 'done') return res.status(202).json({ state: 'running' });
+  return res.json({ state: 'done', resultStatus: job.result.status, result: job.result.body });
+});
+
+function startParseJob(req, res) {
+  res.set('Cache-Control', 'no-store');
+  if (!authed(req)) return res.status(401).json({ error: 'Неверный пароль' });
+  const { image, media_type } = req.body || {};
+  if (typeof image !== 'string' || !image.trim()) {
+    return res.status(400).json({ error: 'Нет изображения' });
+  }
+  const requestId = req.headers['x-parse-request-id'];
+  if (typeof requestId !== 'string' || !/^[a-zA-Z0-9-]{16,80}$/.test(requestId)) {
+    return res.status(400).json({ error: 'Некорректный идентификатор запроса' });
+  }
+  const mediaType = media_type || 'image/jpeg';
+  const fingerprint = createHash('sha256').update(image).update(String(mediaType)).digest('hex');
+  pruneJobs();
+  // При потере ответа повторный POST не создаёт ещё один платный вызов Gemini.
+  const existing = [...parseJobs.values()].find(job => job.requestId === requestId);
+  if (existing) {
+    if (existing.fingerprint !== fingerprint) {
+      return res.status(409).json({ error: 'Идентификатор запроса уже использован для другого фото' });
+    }
+    return res.status(202).json({ jobId: existing.id, state: existing.state });
+  }
+  if ([...parseJobs.values()].filter(job => job.state === 'running').length >= 2) {
+    return res.status(429).json({ error: 'Сервер уже распознаёт два фото. Подождите и попробуйте снова.' });
+  }
+  if (parseJobs.size >= 50) {
+    const oldestDone = [...parseJobs.values()].find(job => job.state === 'done');
+    if (oldestDone) parseJobs.delete(oldestDone.id);
+  }
+  const job = { id: randomUUID(), requestId, fingerprint, state: 'running' };
+  parseJobs.set(job.id, job);
+  res.status(202).json({ jobId: job.id, state: job.state });
+  const started = Date.now();
+  Promise.resolve().then(() => parse.parseImage(image, mediaType)).then(result => {
+    job.result = result;
+  }).catch(error => {
+    console.error('[PARSE JOB ERROR]', error);
+    job.result = { status: 500, body: { error: 'Ошибка распознавания', details: error.message } };
+  }).finally(() => {
+    job.state = 'done';
+    job.finishedAt = Date.now();
+    console.log('[PARSE JOB]', job.id, 'HTTP', job.result.status, 'duration', Date.now() - started, 'ms');
+  });
+}
+
+// Синхронный режим сохранён для старых клиентов; админка использует ?async=1.
 app.post('/api/parse', async (req, res) => {
+  if (req.query.async === '1') return startParseJob(req, res);
   const started = Date.now();
 
   console.log('[PARSE] POST received');
