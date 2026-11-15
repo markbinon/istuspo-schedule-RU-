@@ -301,7 +301,7 @@ async function callModel(image, mt, extra, structured) {
     };
   }
 
-  const model = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+  const model = process.env.GEMINI_MODEL || 'gemini-4-hydrogen';
   const generationConfig = {
     temperature: 0,
     maxOutputTokens: 16000
@@ -335,18 +335,32 @@ async function callModel(image, mt, extra, structured) {
     }
   );
 
-  const data = await r.json();
+  // Читаем ответ как текст, чтобы не терять ошибки при не-JSON ответе.
+  const raw = await r.text();
+  let data;
 
-  // Изменено: теперь в ошибке виден HTTP-статус Gemini
+  try {
+    data = raw ? JSON.parse(raw) : {};
+  } catch {
+    return {
+      ok: false,
+      status: r.status || 502,
+      error: `Gemini вернул не JSON (HTTP ${r.status}): ${raw.slice(0, 700)}`,
+      text: ''
+    };
+  }
+
+  const modelText = (data.candidates?.[0]?.content?.parts || [])
+    .map((p) => p.text || '')
+    .join('');
+
   return {
     ok: r.ok,
     status: r.status,
     error: data.error?.message
       ? `Gemini HTTP ${r.status}: ${data.error.message}`
       : `Gemini HTTP ${r.status}: Ошибка API`,
-    text: (data.candidates?.[0]?.content?.parts || [])
-      .map((p) => p.text || '')
-      .join('')
+    text: modelText
   };
 }
 
