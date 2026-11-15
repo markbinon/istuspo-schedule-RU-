@@ -4,19 +4,31 @@ const find = (re) => {
   return k ? process.env[k] : undefined;
 };
 
-const URL_ = (find(/REST(_API)?_URL$/) || '').replace(/\/+$/, '');
-const TOKEN = find(/REST(_API)?_TOKEN$/);
+// Поддержка переменных Upstash и совместимых названий
+const URL_ = (
+  find(/^UPSTASH_REDIS_REST_URL$/) ||
+  find(/^REST(_API)?_URL$/) ||
+  ''
+).trim().replace(/\/+$/, '');
+
+const TOKEN = (
+  find(/^UPSTASH_REDIS_REST_TOKEN$/) ||
+  find(/^REST(_API)?_TOKEN$/) ||
+  ''
+).trim();
 
 const KEY = 'schedule-replacements';
 const NOTICE_KEY = 'site-notice';
 
 async function load() {
   if (!URL_ || !TOKEN) {
-    throw new Error('Redis не подключён: нет переменных REST_URL и REST_TOKEN');
+    throw new Error('Redis не подключён: проверь UPSTASH_REDIS_REST_URL и UPSTASH_REDIS_REST_TOKEN');
   }
 
   const r = await fetch(`${URL_}/get/${KEY}`, {
-    headers: { Authorization: `Bearer ${TOKEN}` }
+    headers: {
+      Authorization: `Bearer ${TOKEN}`
+    }
   });
 
   if (!r.ok) {
@@ -24,6 +36,7 @@ async function load() {
   }
 
   let j;
+
   try {
     j = await r.json();
   } catch {
@@ -39,13 +52,14 @@ async function load() {
 
 async function save(obj) {
   if (!URL_ || !TOKEN) {
-    throw new Error('Redis не подключён: нет переменных REST_URL и REST_TOKEN');
+    throw new Error('Redis не подключён: проверь UPSTASH_REDIS_REST_URL и UPSTASH_REDIS_REST_TOKEN');
   }
 
   const r = await fetch(`${URL_}/set/${KEY}`, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${TOKEN}`
+      Authorization: `Bearer ${TOKEN}`,
+      'Content-Type': 'application/json'
     },
     body: JSON.stringify(obj)
   });
@@ -57,11 +71,13 @@ async function save(obj) {
 
 async function loadNotice() {
   if (!URL_ || !TOKEN) {
-    throw new Error('Redis не подключён: нет переменных REST_URL и REST_TOKEN');
+    throw new Error('Redis не подключён: проверь UPSTASH_REDIS_REST_URL и UPSTASH_REDIS_REST_TOKEN');
   }
 
   const r = await fetch(`${URL_}/get/${NOTICE_KEY}`, {
-    headers: { Authorization: `Bearer ${TOKEN}` }
+    headers: {
+      Authorization: `Bearer ${TOKEN}`
+    }
   });
 
   if (!r.ok) {
@@ -69,6 +85,7 @@ async function loadNotice() {
   }
 
   let j;
+
   try {
     j = await r.json();
   } catch {
@@ -94,13 +111,14 @@ async function loadNotice() {
 
 async function saveNotice(notice) {
   if (!URL_ || !TOKEN) {
-    throw new Error('Redis не подключён: нет переменных REST_URL и REST_TOKEN');
+    throw new Error('Redis не подключён: проверь UPSTASH_REDIS_REST_URL и UPSTASH_REDIS_REST_TOKEN');
   }
 
   const r = await fetch(`${URL_}/set/${NOTICE_KEY}`, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${TOKEN}`
+      Authorization: `Bearer ${TOKEN}`,
+      'Content-Type': 'application/json'
     },
     body: JSON.stringify(notice)
   });
@@ -110,9 +128,12 @@ async function saveNotice(notice) {
   }
 }
 
+// Проверка пароля администратора
 function authed(req) {
-  const p = process.env.ADMIN_PASSWORD;
-  return Boolean(p) && req.headers['x-admin-password'] === p;
+  const p = String(process.env.ADMIN_PASSWORD || '').trim();
+  const h = String(req.headers['x-admin-password'] || '').trim();
+
+  return Boolean(p) && h === p;
 }
 
 module.exports = {
