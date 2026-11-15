@@ -2,7 +2,10 @@ const { authed } = require('./_store');
 
 // Куда стучаться: напрямую в Google или через ваш релей за границей.
 // Задайте GEMINI_BASE_URL в переменных окружения Layero (адрес воркера).
-const API_BASE = (process.env.GEMINI_BASE_URL || 'https://generativelanguage.googleapis.com').replace(/\/+$/, '');
+const API_BASE = (process.env.GEMINI_BASE_URL || 'https://generativelanguage.googleapis.com').trim().replace(/\/+$/, '');
+// Фоновая задача может жить дольше HTTP-запроса Layero, но не бесконечно.
+const MODEL_TIMEOUT_MS = Math.min(120000, Math.max(1000,
+  Number(process.env.GEMINI_TIMEOUT_MS) || 90000));
 
 // Название группы из таблицы -> id группы на сайте
 const GROUPS = {
@@ -331,6 +334,7 @@ async function callModel(image, mt, extra, structured) {
     `${API_BASE}/v1beta/models/${model}:generateContent`,
     {
       method: 'POST',
+      signal: AbortSignal.timeout(MODEL_TIMEOUT_MS),
       headers: reqHeaders,
       body: JSON.stringify({
         contents: [{
@@ -359,9 +363,20 @@ async function callModel(image, mt, extra, structured) {
     };
   }
 
-  const modelText = (data.candidates?.[0]?.content?.parts || [])
+  const candidate = data.candidates?.[0];
+  const modelText = (candidate?.content?.parts || [])
+    .filter((p) => !p.thought)
     .map((p) => p.text || '')
     .join('');
+
+  if (r.ok && !modelText.trim()) {
+    return {
+      ok: false,
+      status: 422,
+      error: `Gemini не вернул результат (${candidate?.finishReason || data.promptFeedback?.blockReason || 'пустой ответ'}). Попробуйте более чёткое фото.`,
+      text: ''
+    };
+  }
 
   return {
     ok: r.ok,
@@ -385,18 +400,19 @@ async function recognize(image, mt) {
     try {
       res = await callModel(image, mt, extra, structured);
     } catch (e) {
-      lastErr = {
-        status: 502,
-        error: 'Сеть: ' + e.message
+      const timedOut = e.name === 'TimeoutError' || e.name === 'AbortError';
+      return {
+        status: timedOut ? 504 : 502,
+        error: timedOut
+          ? `Gemini не ответил за ${Math.round(MODEL_TIMEOUT_MS / 1000)} с. Проверьте доступ с сервера Layero и GEMINI_BASE_URL (если используется релей).`
+          : `Не удалось подключиться к Gemini: ${e.cause?.code || e.message}. Проверьте доступ с сервера и GEMINI_BASE_URL.`
       };
-      await sleep(800 * (attempt + 1));
-      continue;
     }
 
     if (!res.ok) {
       lastErr = res;
 
-      if (res.status === 400 && structured) {
+      if (res.status === 400 && structured && /schema|responseMimeType|response_mime_type|structured/i.test(res.error)) {
         structured = false;
         continue;
       }
@@ -415,7 +431,11 @@ async function recognize(image, mt) {
     lastText = res.text;
 
     try {
-      return { all: extractJson(res.text) };
+      const all = extractJson(res.text);
+      if (!Array.isArray(all) && !Array.isArray(all?.rows)) {
+        throw new Error('Ответ не содержит массива строк');
+      }
+      return { all };
     } catch {
       extra = 'ВАЖНО: верни только валидный JSON-массив, без текста до и после него.';
     }
@@ -433,26 +453,14 @@ async function recognize(image, mt) {
       };
 }
 
-module.exports = async (req, res) => {
-  if (req.method !== 'POST') return res.status(405).end();
-
-  if (!authed(req)) {
-    return res.status(401).json({ error: 'Неверный пароль' });
-  }
-
-  const { image, media_type } = req.body || {};
-
-  if (!image) {
-    return res.status(400).json({ error: 'Нет изображения' });
-  }
-
-  const out = await recognize(image, media_type || 'image/jpeg');
+async function parseImage(image, mediaType = 'image/jpeg') {
+  const out = await recognize(image, mediaType);
 
   if (out.error) {
-    return res.status(out.status || 502).json({
-      error: out.error,
-      raw: out.raw
-    });
+    return {
+      status: out.status || 502,
+      body: { error: out.error, raw: out.raw }
+    };
   }
 
   let all = out.all;
@@ -544,11 +552,29 @@ module.exports = async (req, res) => {
     })
     .filter((r) => r.pair > 0);
 
-  res.status(200).json({
-    rows,
-    total: all.length,
-    skipped: known.length - rows.length,
-    warnings: [...new Set(warnings)],
-    sample: all.slice(0, 3),
-  });
+  return {
+    status: 200,
+    body: {
+      rows,
+      total: all.length,
+      skipped: known.length - rows.length,
+      warnings: [...new Set(warnings)],
+      sample: all.slice(0, 3),
+    }
+  };
+}
+
+module.exports = async (req, res) => {
+  if (req.method !== 'POST') return res.status(405).end();
+  if (!authed(req)) return res.status(401).json({ error: 'Неверный пароль' });
+  const { image, media_type } = req.body || {};
+  if (typeof image !== 'string' || !image.trim()) {
+    return res.status(400).json({ error: 'Нет изображения' });
+  }
+  const result = await parseImage(image, media_type || 'image/jpeg');
+  return res.status(result.status).json(result.body);
 };
+
+module.exports.parseImage = parseImage;
+module.exports.groups = [...new Set(Object.values(GROUPS))]
+  .map((id, i) => ({ id, name: GROUP_LIST[i] }));
