@@ -1,40 +1,54 @@
 
 const express = require('express');
 
+const express = require('express');
+
 const app = express();
 
-// Принимаем JSON
 app.use(express.json({ limit: '25mb' }));
 
-// Подключаем API
+// Подключаем все API
+const parse = require('./api/parse');
 const replacements = require('./api/replacements');
 const siteNotice = require('./api/site-notice');
 
-// Проверяем GET
+// Проверка GET
 app.get('/api/parse', (req, res) => {
-  res.status(200).json({
+  res.json({
     ok: true,
     route: 'parse',
     method: 'GET'
   });
 });
 
-// ВРЕМЕННЫЙ ТЕСТ POST — без Gemini и Redis
-app.post('/api/parse', (req, res) => {
-  console.log('[TEST] POST reached Express');
+// Настоящее распознавание фотографий
+app.post('/api/parse', async (req, res) => {
+  console.log('[PARSE] POST received');
 
-  return res.status(200).json({
-    ok: true,
-    message: 'POST успешно дошёл до Express',
-    bodyReceived: !!req.body
-  });
+  try {
+    console.log('[PARSE] Body received:', !!req.body);
+    console.log('[PARSE] Starting recognition');
+
+    await parse(req, res);
+
+    console.log('[PARSE] Handler finished');
+  } catch (error) {
+    console.error('[PARSE ERROR]', error);
+
+    if (!res.headersSent) {
+      res.status(500).json({
+        error: 'Ошибка распознавания',
+        details: error.message || String(error)
+      });
+    }
+  }
 });
 
 // Остальные API
 app.all('/api/replacements', replacements);
 app.all('/api/site-notice', siteNotice);
 
-// Раздаём файлы сайта
+// Статические файлы сайта
 app.use(express.static(__dirname));
 
 // Неизвестные API
@@ -44,7 +58,18 @@ app.use('/api', (req, res) => {
   });
 });
 
-// Запуск
+// Общая обработка ошибок
+app.use((error, req, res, next) => {
+  console.error('[SERVER ERROR]', error);
+
+  if (!res.headersSent) {
+    res.status(500).json({
+      error: 'Внутренняя ошибка сервера',
+      details: error.message || String(error)
+    });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, '0.0.0.0', () => {
