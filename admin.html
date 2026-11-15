@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex">
-<title>Замены · Админ · ИСТУ СПО</title>
+<title>Замены · Админ </title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Unbounded:wght@500;700;900&display=swap" rel="stylesheet">
@@ -157,11 +157,10 @@ textarea{resize:vertical;min-height:74px}
 </div>
 <div class="toast" id="toast"><span id="toastText"></span><button id="toastBtn" class="hidden">Вернуть</button></div>
 
-<script src="data.js"></script>
 <script>
 'use strict';
 const $ = id => document.getElementById(id);
-const D = window.SCHEDULE_DATA;
+const D = { GROUPS:[] };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const pad = n => String(n).padStart(2,'0');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -188,12 +187,16 @@ async function readApiResponse(response){
   try { data = raw ? JSON.parse(raw) : {}; }
   catch {
     const preview = raw.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim().slice(0,180);
-    throw new Error(`Сервер вернул не JSON (HTTP ${response.status})${preview ? ': ' + preview : ''}`);
+    const error = new Error(`Сервер вернул не JSON (HTTP ${response.status})${preview ? ': ' + preview : ''}`);
+    error.status = response.status;
+    throw error;
   }
   if (!response.ok){
     let msg = data.error || `Ошибка сервера HTTP ${response.status}`;
     if (data.debug) msg += ` | stage=${data.debug.stage||'-'} ocrLen=${data.debug.ocrTextLength??'-'}`;
-    throw new Error(msg);
+    const error = new Error(msg);
+    error.status = response.status;
+    throw error;
   }
   return data;
 }
@@ -201,7 +204,7 @@ async function wakeBackend(maxWaitMs = 90000){
   const t0 = Date.now();
   while (Date.now() - t0 < maxWaitMs){
     try {
-      const r = await fetch('/health?wake=' + Date.now(), { cache:'no-store' });
+      const r = await fetch('/health?wake=' + Date.now(), { cache:'no-store', signal:AbortSignal.timeout(8000) });
       const j = await r.json().catch(() => null);
       if (r.ok && j && j.status === 'running') return true;
     } catch {}
@@ -209,20 +212,46 @@ async function wakeBackend(maxWaitMs = 90000){
   }
   return false;
 }
-async function parseWithRetry(payload, fileName){
-  const attempts = 6;
+async function requestWithRetry(url, options, fileName){
+  const attempts = 4;
   for (let a = 1; a <= attempts; a++){
     try {
-      const r = await fetch('/api/parse', { method:'POST', headers:headers(), body:JSON.stringify(payload) });
+      const r = await fetch(url, { ...options, cache:'no-store', signal:AbortSignal.timeout(15000) });
       return await readApiResponse(r);
     } catch (e){
-      const msg = String(e.message || e);
-      const transient = /backend_starting|HTTP 50[234]|не JSON|Failed to fetch|NetworkError|Load failed/i.test(msg);
+      const transient = e.status === 429 || e.status >= 500 ||
+        ['TimeoutError','AbortError','TypeError'].includes(e.name);
       if (!transient || a === attempts) throw e;
-      say($('msg'), `Сервер просыпается… ${fileName}: попытка ${a+1} из ${attempts}`, 'warn');
-      await sleep(3000 * a);
+      say($('msg'), `Восстанавливаю соединение… ${fileName}: попытка ${a+1} из ${attempts}`, 'warn');
+      await sleep(1000 * a);
     }
   }
+}
+async function parseWithRetry(payload, fileName){
+  const requestId = crypto.randomUUID();
+  const started = await requestWithRetry('/api/parse?async=1', {
+    method:'POST',
+    headers:{ ...headers(), 'x-parse-request-id':requestId },
+    body:JSON.stringify(payload)
+  }, fileName);
+  if (!started.jobId) throw new Error('Сервер не вернул ID задачи. Обновите server.js вместе с admin.html.');
+  const deadline = Date.now() + 390000;
+  while (Date.now() < deadline){
+    const job = await requestWithRetry('/api/parse/jobs/' + encodeURIComponent(started.jobId), {
+      headers:headers()
+    }, fileName);
+    if (job.state === 'done'){
+      // Ошибка Gemini — конечный результат, а не повод загрузить фото ещё 6 раз.
+      if (job.resultStatus !== 200){
+        throw new Error(job.result?.error || `Ошибка распознавания HTTP ${job.resultStatus}`);
+      }
+      return job.result;
+    }
+    if (job.state !== 'running') throw new Error('Некорректный статус задачи распознавания');
+    say($('msg'), `Распознаю: ${fileName}. Задача выполняется на сервере…`);
+    await sleep(1500);
+  }
+  throw new Error('Истекло время ожидания задачи. Проверьте логи Gemini на Layero.');
 }
 async function shrink(file){
   const bmp = await createImageBitmap(file);
@@ -238,7 +267,7 @@ function renderFiles(){
   $('files').innerHTML = state.files.map((f,i) => `
     <div class="file"><span>${esc(f.file.name)}</span>
       <span class="st ${f.status}">${{wait:'ожидает',busy:'распознаётся',ok:'готово',err:'ошибка'}[f.status]}</span>
-      ${f.note ? `<span style="color:var(--dim);font-size:11.5px;max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(f.note)}</span>` : ''}
+      ${f.note ? `<span style="color:var(--dim);font-size:11.5px;max-width:60%;white-space:normal;overflow-wrap:anywhere">${esc(f.note)}</span>` : ''}
     </div>`).join('');
 }
 function addFiles(list){
@@ -265,7 +294,12 @@ $('go').onclick = async () => {
   let okCount = 0, dup = 0;
   try {
     say($('msg'), 'Проверяю сервер…', 'warn');
-    await wakeBackend();
+    if (!await wakeBackend()) throw new Error('Сервер Layero не отвечает. Проверьте /health и логи запуска.');
+    const groups = await requestWithRetry('/api/parse/groups', { headers:headers() }, 'список групп');
+    if (!Array.isArray(groups.groups) || !groups.groups.length) {
+      throw new Error('Сервер не вернул список групп. Обновите все три файла исправления.');
+    }
+    D.GROUPS = groups.groups;
     for (const f of state.files){
       if (f.status === 'ok') continue;
       f.status = 'busy'; renderFiles();
