@@ -1,79 +1,207 @@
 <!DOCTYPE html>
-<html lang="ru"><head><meta charset="utf-8">
+<html lang="ru">
+<head>
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="robots" content="noindex"><title>Замены</title>
+<meta name="robots" content="noindex">
+<title>Замены · Админ · ИСТУ СПО</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Unbounded:wght@500;700;900&display=swap" rel="stylesheet">
 <style>
-body{font-family:system-ui,sans-serif;background:#0d060a;color:#fff;max-width:36rem;margin:0 auto;padding:1rem}
-input,button,textarea{font:inherit;width:100%;box-sizing:border-box;padding:.7rem;margin:.3rem 0;border-radius:.7rem;border:1px solid #f472b655;background:#1e0f16;color:#fff}
-button{background:linear-gradient(135deg,#f472b6,#e11d48);border:0;font-weight:600}
-textarea{height:12rem;font-family:monospace;font-size:.75rem}
-li{margin:.3rem 0}.cx{color:#fb7185}#msg{color:#f9a8d4}
-</style></head><body>
-<h1>Загрузка замен</h1>
-<section style="border:1px solid #f472b655;border-radius:1rem;padding:.8rem;margin:1rem 0 1.5rem">
-  <h2>Технические работы</h2>
-  <label style="display:flex;align-items:center;gap:.6rem"><input id="noticeShow" type="checkbox" style="width:auto"> Показывать сообщение о технических работах</label>
-  <label for="noticeTitle">Заголовок</label>
-  <input id="noticeTitle" value="Временно не работает" maxlength="120">
-  <label for="noticeSub">Текст сообщения</label>
-  <textarea id="noticeSub" style="height:5rem;font-family:system-ui,sans-serif;font-size:1rem" maxlength="500">Ведутся технические работы. Загляните позже.</textarea>
-  <button id="noticeSave" type="button">Сохранить настройки</button>
-  <p id="noticeMsg" aria-live="polite"></p>
-</section>
-<input id="pw" type="password" placeholder="Пароль">
-<label>Дата, на которую действуют замены</label>
-<input id="date" type="date">
-<label for="file">Фотографии расписания (можно выбрать несколько)</label>
-<input id="file" type="file" accept="image/*" multiple>
-<p id="fileInfo" aria-live="polite">Можно выбрать сразу несколько изображений.</p>
-<button id="go" type="button">Распознать фотографии</button>
-<ul id="list"></ul>
-<textarea id="json" hidden></textarea>
-<button id="pub" hidden>Опубликовать на сайте</button>
-<p id="msg"></p>
-<script>
-const $ = (id) => document.getElementById(id);
-const pad = (n) => String(n).padStart(2, '0');
-const t = new Date(Date.now() + 864e5);
-$('date').value = `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}`;
-$('pw').value = sessionStorage.getItem('pw') || '';
-const say = (s) => { $('msg').textContent = s; };
-const noticeSay = (s) => { $('noticeMsg').textContent = s; };
+:root{
+  --bg:#0a0510; --bg2:#140a1c; --surface:rgba(28,16,38,.78); --line:rgba(244,114,182,.18);
+  --text:#f7eefb; --muted:#b9a8c9; --dim:#8d7ba0;
+  --pink:#f472b6; --rose:#e11d48; --violet:#a78bfa; --blue:#38bdf8;
+  --amber:#fbbf24; --green:#34d399; --red:#fb7185; --radius:16px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:500 15px/1.5 Manrope,system-ui,sans-serif;min-height:100vh}
+*{scrollbar-width:thin;scrollbar-color:var(--pink) rgba(255,255,255,.05)}
+*::-webkit-scrollbar{width:9px;height:9px}
+*::-webkit-scrollbar-track{background:rgba(255,255,255,.04)}
+*::-webkit-scrollbar-thumb{background:linear-gradient(180deg,var(--pink),var(--violet));border-radius:9px;border:2px solid var(--bg)}
+.bg{position:fixed;inset:0;z-index:-1;background:
+  radial-gradient(40% 36% at 10% 6%,rgba(225,29,72,.26),transparent 70%),
+  radial-gradient(38% 40% at 92% 10%,rgba(167,139,250,.2),transparent 70%),
+  radial-gradient(44% 44% at 80% 92%,rgba(56,189,248,.12),transparent 70%),
+  linear-gradient(160deg,var(--bg),var(--bg2) 60%,#0d0716)}
+.wrap{max-width:980px;margin:0 auto;padding:26px 18px 70px}
+a{color:var(--pink)}
+h1{font-family:Unbounded;font-weight:900;font-size:clamp(24px,4vw,36px);margin:0 0 6px}
+h1 span{background:linear-gradient(90deg,var(--pink),var(--violet));-webkit-background-clip:text;background-clip:text;color:transparent}
+h2{font-family:Unbounded;font-weight:700;font-size:17px;margin:0 0 14px}
+.lead{color:var(--muted);margin:0 0 24px;font-size:14px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:22px}
+.back{color:var(--muted);text-decoration:none;font-weight:800;font-size:13px;border:1px solid var(--line);padding:8px 14px;border-radius:999px}
+.back:hover{color:var(--text);border-color:var(--pink)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:18px;backdrop-filter:blur(10px);box-shadow:0 16px 44px rgba(0,0,0,.4)}
+label{display:block;font-size:11.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin:12px 0 6px}
+input,select,textarea,button{font:inherit}
+input,select,textarea{width:100%;padding:11px 13px;border-radius:11px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--text);font-weight:600}
+input:focus,select:focus,textarea:focus{outline:2px solid rgba(56,189,248,.5);outline-offset:1px}
+textarea{resize:vertical;min-height:74px}
+.btn{border:0;border-radius:12px;padding:12px 18px;font-weight:800;font-size:14px;color:#fff;background:linear-gradient(135deg,var(--rose),var(--pink));box-shadow:0 8px 22px rgba(225,29,72,.3);transition:.16s;display:inline-flex;align-items:center;gap:8px;justify-content:center}
+.btn:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none;filter:none}
+.btn.ghost{background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--text);box-shadow:none}
+.btn.small{padding:8px 12px;font-size:12.5px;border-radius:10px}
+.btn.danger{background:linear-gradient(135deg,#be123c,var(--red))}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+.row>div{flex:1;min-width:150px}
+.check{display:flex;align-items:center;gap:10px;font-weight:700;font-size:14px;color:var(--text);text-transform:none;letter-spacing:0;margin:10px 0}
+.check input{width:auto}
+.msg{font-size:13.5px;font-weight:700;color:var(--pink);min-height:20px;margin-top:10px}
+.msg.ok{color:var(--green)} .msg.err{color:var(--red)} .msg.warn{color:var(--amber)}
+.drop{border:2px dashed var(--line);border-radius:var(--radius);padding:34px 18px;text-align:center;color:var(--muted);font-weight:700;transition:.2s;cursor:pointer}
+.drop:hover,.drop.over{border-color:var(--pink);background:rgba(244,114,182,.06);color:var(--text)}
+.drop b{color:var(--pink)}
+.files{display:grid;gap:8px;margin-top:12px}
+.file{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:11px;padding:9px 12px;font-size:13px;font-weight:700}
+.file .st{margin-left:auto;font-size:11.5px;font-weight:800;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.st.wait{color:var(--dim);background:rgba(255,255,255,.06)}
+.st.busy{color:var(--blue);background:rgba(56,189,248,.12)}
+.st.ok{color:var(--green);background:rgba(52,211,153,.12)}
+.st.err{color:var(--red);background:rgba(251,113,133,.12)}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.toolbar input{flex:2;min-width:170px}
+.toolbar select{flex:1;min-width:140px}
+.count{font-weight:800;font-size:13px;color:var(--violet);white-space:nowrap}
+.rows{display:grid;gap:10px}
+.rrow{border:1px solid var(--line);border-radius:14px;padding:14px;background:rgba(255,255,255,.03);animation:rise .35s both}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.rrow.cancel{border-color:rgba(251,113,133,.4)}
+.rhead{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.rhead select{width:auto;padding:7px 10px;font-size:13px}
+.rhead .g{min-width:130px}
+.rhead .sp{flex:1}
+.rgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px}
+.rgrid input{padding:9px 11px;font-size:13.5px}
+.rfrom{font-size:12px;color:var(--dim);margin-top:8px}
+.rfrom s{opacity:.85}
+.iconbtn{border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--muted);width:34px;height:34px;border-radius:10px;font-size:15px;flex:none}
+.iconbtn:hover{color:var(--red);border-color:var(--red)}
+.warns{border:1px solid rgba(251,191,36,.35);background:rgba(251,191,36,.07);border-radius:12px;padding:12px 14px;margin-top:14px;font-size:13px;color:var(--amber);font-weight:600;display:none}
+.warns.show{display:block}
+.warns li{margin:3px 0}
+.empty{border:1px dashed var(--line);border-radius:14px;padding:30px;text-align:center;color:var(--dim);font-weight:700}
+.toast{position:fixed;left:50%;bottom:20px;transform:translate(-50%,16px);z-index:100;background:#241430;border:1px solid var(--line);color:var(--text);font-weight:700;font-size:13.5px;padding:12px 16px;border-radius:12px;opacity:0;pointer-events:none;transition:.22s;display:flex;gap:14px;align-items:center;max-width:94vw;box-shadow:0 16px 44px rgba(0,0,0,.5)}
+.toast.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+.toast button{border:0;background:linear-gradient(135deg,var(--rose),var(--pink));color:#fff;font-weight:800;font-size:12.5px;padding:7px 12px;border-radius:9px}
+.hidden{display:none!important}
+@media (max-width:640px){ .rhead .sp{display:none} .wrap{padding-top:18px} }
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<div class="wrap">
+  <div class="top">
+    <a class="back" href="index.html">← На сайт</a>
+    <span style="font-size:12px;font-weight:800;letter-spacing:.12em;color:var(--dim);text-transform:uppercase">Админ-панель</span>
+  </div>
+  <h1>Загрузка <span>замен</span></h1>
+  <p class="lead">Распознавание фотографий расписания, проверка результата и публикация на сайте.</p>
 
-// Читаем ответ как текст и только затем разбираем JSON: HTML-ошибки платформы
-// показываются понятным сообщением вместо «JSON.parse unexpected character».
-async function readApiResponse(response) {
+  <section class="card">
+    <h2>Доступ</h2>
+    <div class="row">
+      <div><label for="pw">Пароль администратора</label><input id="pw" type="password" placeholder="Пароль" autocomplete="current-password"></div>
+      <div><label for="date">Дата действия замен</label><input id="date" type="date"></div>
+    </div>
+    <p class="msg" id="authMsg"></p>
+  </section>
+
+  <section class="card">
+    <h2>Технические работы</h2>
+    <label class="check"><input id="noticeShow" type="checkbox"> Показывать сообщение на сайте</label>
+    <label for="noticeTitle">Заголовок</label>
+    <input id="noticeTitle" maxlength="120" value="Временно не работает">
+    <label for="noticeSub">Текст сообщения</label>
+    <textarea id="noticeSub" maxlength="500">Ведутся технические работы. Загляните позже.</textarea>
+    <div style="margin-top:12px"><button class="btn ghost" id="noticeSave">Сохранить настройки</button></div>
+    <p class="msg" id="noticeMsg"></p>
+  </section>
+
+  <section class="card">
+    <h2>Фотографии расписания</h2>
+    <div class="drop" id="drop" role="button" tabindex="0">
+      <b>Перетащите фото сюда</b> или нажмите, чтобы выбрать<br>
+      <span style="font-size:12.5px;color:var(--dim)">Можно несколько · JPG/PNG · распознаются по очереди</span>
+    </div>
+    <input id="file" type="file" accept="image/*" multiple class="hidden">
+    <div class="files" id="files"></div>
+    <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn" id="go">Распознать фотографии</button>
+      <button class="btn ghost" id="clear">Очистить</button>
+    </div>
+    <p class="msg" id="msg" aria-live="polite"></p>
+    <div class="warns" id="warns"><b>Предупреждения распознавания:</b><ul id="warnList"></ul></div>
+  </section>
+
+  <section class="card hidden" id="resultCard">
+    <h2>Результат распознавания</h2>
+    <div class="toolbar">
+      <input id="filter" type="search" placeholder="Поиск: группа, предмет, преподаватель…">
+      <select id="groupFilter"><option value="">Все группы</option></select>
+      <span class="count" id="count"></span>
+      <button class="btn small danger" id="delFiltered">Удалить показанные</button>
+    </div>
+    <div class="rows" id="rows"></div>
+    <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <button class="btn" id="pub">Опубликовать на сайте</button>
+      <span style="font-size:12.5px;color:var(--dim);font-weight:700">Перед публикацией проверьте строки — поля можно редактировать.</span>
+    </div>
+    <p class="msg" id="pubMsg"></p>
+  </section>
+</div>
+<div class="toast" id="toast"><span id="toastText"></span><button id="toastBtn" class="hidden">Вернуть</button></div>
+
+<script src="data.js"></script>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const D = window.SCHEDULE_DATA;
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2,'0');
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const headers = () => ({ 'content-type':'application/json', 'x-admin-password': $('pw').value });
+
+const state = { files:[], rows:[], warnings:[], busy:false, undo:null };
+let toastTimer;
+
+function toast(text, undoFn){
+  $('toastText').textContent = text;
+  $('toastBtn').classList.toggle('hidden', !undoFn);
+  $('toastBtn').onclick = undoFn ? () => { undoFn(); hideToast(); } : null;
+  $('toast').classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(hideToast, undoFn ? 6000 : 3200);
+}
+function hideToast(){ $('toast').classList.remove('show'); }
+function say(el, text, kind){ el.textContent = text; el.className = 'msg' + (kind ? ' ' + kind : ''); }
+
+/* ---------- API ---------- */
+async function readApiResponse(response){
   const raw = await response.text();
   let data;
   try { data = raw ? JSON.parse(raw) : {}; }
   catch {
-    const preview = raw.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 180);
+    const preview = raw.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim().slice(0,180);
     throw new Error(`Сервер вернул не JSON (HTTP ${response.status})${preview ? ': ' + preview : ''}`);
   }
-  if (!response.ok) {
+  if (!response.ok){
     let msg = data.error || `Ошибка сервера HTTP ${response.status}`;
-    if (data.debug) {
-      const d = data.debug;
-      msg += ` | stage=${d.stage || '-'} ocrLen=${d.ocrTextLength ?? '-'} rows=${d.parsedRows ?? '-'}`;
-    }
-    if (Array.isArray(data.baiduLogs) && data.baiduLogs.length) {
-      msg += ' | baidu: ' + data.baiduLogs.slice(-3).join(' ; ');
-    }
+    if (data.debug) msg += ` | stage=${data.debug.stage||'-'} ocrLen=${data.debug.ocrTextLength??'-'}`;
     throw new Error(msg);
   }
   return data;
 }
-
-// ---------- Пробуждение бэкенда Layero (фикс backend_starting) ----------
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-// Layero останавливает контейнер при простое и поднимает по первому запросу.
-// Пингуем /health с уникальным параметром (обход кэша CDN) и ждём статус "running".
-async function wakeBackend(maxWaitMs = 90000) {
+async function wakeBackend(maxWaitMs = 90000){
   const t0 = Date.now();
-  while (Date.now() - t0 < maxWaitMs) {
+  while (Date.now() - t0 < maxWaitMs){
     try {
-      const r = await fetch('/health?wake=' + Date.now(), { cache: 'no-store' });
+      const r = await fetch('/health?wake=' + Date.now(), { cache:'no-store' });
       const j = await r.json().catch(() => null);
       if (r.ok && j && j.status === 'running') return true;
     } catch {}
@@ -81,178 +209,220 @@ async function wakeBackend(maxWaitMs = 90000) {
   }
   return false;
 }
-
-// POST /api/parse с повторными попытками, пока Layero поднимает бэкенд.
-// Ретраим только временные ошибки (backend_starting, 502/503/504, обрыв сети).
-async function parseWithRetry(payload, fileName) {
+async function parseWithRetry(payload, fileName){
   const attempts = 6;
-  for (let a = 1; a <= attempts; a++) {
+  for (let a = 1; a <= attempts; a++){
     try {
-      const r = await fetch('/api/parse', {
-        method: 'POST',
-        headers: headers(),
-        body: JSON.stringify(payload)
-      });
+      const r = await fetch('/api/parse', { method:'POST', headers:headers(), body:JSON.stringify(payload) });
       return await readApiResponse(r);
-    } catch (e) {
+    } catch (e){
       const msg = String(e.message || e);
       const transient = /backend_starting|HTTP 50[234]|не JSON|Failed to fetch|NetworkError|Load failed/i.test(msg);
       if (!transient || a === attempts) throw e;
-      say(`Сервер просыпается… ${fileName}: попытка ${a + 1} из ${attempts}`);
+      say($('msg'), `Сервер просыпается… ${fileName}: попытка ${a+1} из ${attempts}`, 'warn');
       await sleep(3000 * a);
     }
   }
 }
-// -----------------------------------------------------------------------
-
-async function loadNoticeSettings() {
-  try {
-    const r = await fetch('/api/site-notice', { cache: 'no-store' });
-    const notice = await readApiResponse(r);
-    $('noticeShow').checked = Boolean(notice.show);
-    $('noticeTitle').value = notice.title || 'Временно не работает';
-    $('noticeSub').value = notice.sub || 'Ведутся технические работы. Загляните позже.';
-  } catch (e) {
-    noticeSay('Не удалось загрузить настройки: ' + e.message);
-  }
-}
-
-$('noticeSave').onclick = async () => {
-  sessionStorage.setItem('pw', $('pw').value);
-  noticeSay('Сохраняю…');
-  try {
-    const r = await fetch('/api/site-notice', {
-      method: 'POST',
-      headers: headers(),
-      body: JSON.stringify({
-        show: $('noticeShow').checked,
-        title: $('noticeTitle').value.trim(),
-        sub: $('noticeSub').value.trim()
-      })
-    });
-    await readApiResponse(r);
-    noticeSay('Настройки сохранены. Сайт обновится примерно в течение 30 секунд.');
-  } catch (e) {
-    noticeSay('Не удалось сохранить: ' + e.message);
-  }
-};
-
-async function shrink(file) {
+async function shrink(file){
   const bmp = await createImageBitmap(file);
   const k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
   const c = document.createElement('canvas');
-  c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+  c.width = Math.round(bmp.width*k); c.height = Math.round(bmp.height*k);
   c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
   return c.toDataURL('image/jpeg', 0.76).split(',')[1];
 }
-const headers = () => ({ 'content-type': 'application/json', 'x-admin-password': $('pw').value });
 
-function show(rows) {
-  $('list').innerHTML = '';
-  rows.forEach((r) => {
-    const li = document.createElement('li');
-    li.textContent = `${r.group} · пара ${r.pair}${r.sub ? ' · п/г ' + r.sub : ''}: ` +
-      (r.to ? `${r.to.subject}, ${r.to.teacher || '—'}, ${r.to.room || '—'}` : 'Пары нет');
-    if (!r.to) li.className = 'cx';
-    $('list').appendChild(li);
-  });
-  if (!rows.length) say('Для ваших групп замен в списке нет.');
+/* ---------- files ---------- */
+function renderFiles(){
+  $('files').innerHTML = state.files.map((f,i) => `
+    <div class="file"><span>${esc(f.file.name)}</span>
+      <span class="st ${f.status}">${{wait:'ожидает',busy:'распознаётся',ok:'готово',err:'ошибка'}[f.status]}</span>
+      ${f.note ? `<span style="color:var(--dim);font-size:11.5px;max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(f.note)}</span>` : ''}
+    </div>`).join('');
+}
+function addFiles(list){
+  for (const file of list) if (file.type.startsWith('image/')) state.files.push({ file, status:'wait', note:'' });
+  renderFiles();
+}
+$('drop').onclick = () => $('file').click();
+$('drop').onkeydown = e => { if (e.key==='Enter'||e.key===' '){ e.preventDefault(); $('file').click(); } };
+$('file').onchange = () => { addFiles(Array.from($('file').files||[])); $('file').value=''; };
+['dragover','dragenter'].forEach(ev => $('drop').addEventListener(ev, e => { e.preventDefault(); $('drop').classList.add('over'); }));
+['dragleave','drop'].forEach(ev => $('drop').addEventListener(ev, e => { e.preventDefault(); $('drop').classList.remove('over'); }));
+$('drop').addEventListener('drop', e => addFiles(Array.from(e.dataTransfer.files||[])));
+$('clear').onclick = () => { state.files=[]; state.rows=[]; state.warnings=[]; renderFiles(); renderRows(); say($('msg'),''); $('warns').classList.remove('show'); };
+
+/* ---------- recognize ---------- */
+$('go').onclick = async () => {
+  if (state.busy) return;
+  if (!$('pw').value) return say($('authMsg'), 'Введите пароль администратора.', 'err');
+  if (!state.files.length) return say($('msg'), 'Добавьте одну или несколько фотографий.', 'err');
+  sessionStorage.setItem('pw', $('pw').value);
+  state.busy = true; $('go').disabled = true; $('pub').disabled = true;
+  state.warnings = [];
+  const combined = new Map(state.rows.map(r => [key(r), r]));
+  let okCount = 0, dup = 0;
+  try {
+    say($('msg'), 'Проверяю сервер…', 'warn');
+    await wakeBackend();
+    for (const f of state.files){
+      if (f.status === 'ok') continue;
+      f.status = 'busy'; renderFiles();
+      say($('msg'), `Распознаю: ${f.file.name}`);
+      try {
+        const image = await shrink(f.file);
+        const j = await parseWithRetry({ image, media_type:'image/jpeg' }, f.file.name);
+        const rows = Array.isArray(j.rows) ? j.rows : [];
+        if (Array.isArray(j.warnings)) state.warnings.push(...j.warnings);
+        if (!rows.length){
+          f.status = 'err'; f.note = 'пусто: строк не найдено';
+        } else {
+          for (const r of rows){
+            const clean = normalizeRow(r);
+            if (!clean) continue;
+            if (combined.has(key(clean))) dup++;
+            combined.set(key(clean), clean);
+          }
+          f.status = 'ok'; f.note = `${rows.length} строк`; okCount++;
+        }
+      } catch (e){ f.status = 'err'; f.note = e.message; }
+      renderFiles();
+    }
+    state.rows = Array.from(combined.values()).sort(cmpRows);
+    renderRows(); renderWarnings();
+    const failed = state.files.filter(f => f.status === 'err').length;
+    say($('msg'), `Готово: обработано ${okCount}, с ошибками ${failed}, строк ${state.rows.length}${dup ? `, повторов объединено ${dup}` : ''}.`, failed ? 'warn' : 'ok');
+  } catch (e){ say($('msg'), 'Ошибка: ' + e.message, 'err'); }
+  finally { state.busy = false; $('go').disabled = false; $('pub').disabled = false; }
+};
+
+const key = r => `${r.group}|${r.pair}|${r.sub||0}`;
+const cmpRows = (a,b) => a.group.localeCompare(b.group,'ru') || a.pair-b.pair || a.sub-b.sub;
+function normalizeRow(r){
+  if (!r || !r.group || !(Number(r.pair) >= 1 && Number(r.pair) <= 6)) return null;
+  const lesson = l => l ? { subject:String(l.subject||'').trim(), teacher:String(l.teacher||'').trim(), room:String(l.room||'').trim() } : { subject:'', teacher:'', room:'' };
+  return { group:String(r.group), pair:Number(r.pair), sub:Number(r.sub)||0, from:lesson(r.from), to:r.to === null ? null : lesson(r.to) };
 }
 
-$('file').addEventListener('change', () => {
-  const files = Array.from($('file').files || []);
-  $('fileInfo').textContent = files.length
-    ? `Выбрано фотографий: ${files.length}. ` + files.map((f) => f.name).join(' · ')
-    : 'Можно выбрать сразу несколько изображений.';
-});
+/* ---------- rows editor ---------- */
+function filteredRows(){
+  const q = $('filter').value.trim().toLowerCase();
+  const g = $('groupFilter').value;
+  return state.rows.filter(r => (!g || r.group === g) &&
+    (!q || [r.group, r.to?.subject, r.to?.teacher, r.to?.room, r.from?.subject].join(' ').toLowerCase().includes(q)));
+}
+function renderRows(){
+  const list = filteredRows();
+  $('resultCard').classList.toggle('hidden', !state.rows.length);
+  $('count').textContent = `${list.length} из ${state.rows.length} строк`;
+  const gf = $('groupFilter');
+  const cur = gf.value;
+  gf.innerHTML = '<option value="">Все группы</option>' + [...new Set(state.rows.map(r=>r.group))].sort((a,b)=>a.localeCompare(b,'ru')).map(g=>`<option ${g===cur?'selected':''}>${esc(g)}</option>`).join('');
+  $('rows').innerHTML = list.map(r => {
+    const i = state.rows.indexOf(r);
+    const cancel = r.to === null;
+    const gOpts = D.GROUPS.map(g=>`<option value="${g.id}" ${g.id===r.group?'selected':''}>${esc(g.name)}</option>`).join('');
+    return `<div class="rrow ${cancel?'cancel':''}" data-i="${i}">
+      <div class="rhead">
+        <select class="g" data-f="group">${gOpts}${D.GROUPS.some(g=>g.id===r.group)?'':`<option selected>${esc(r.group)}</option>`}</select>
+        <select data-f="pair">${[1,2,3,4,5,6].map(p=>`<option ${p===r.pair?'selected':''}>${p}</option>`).join('')}</select>
+        <select data-f="sub">${[0,1,2].map(s=>`<option value="${s}" ${s===r.sub?'selected':''}>${s?('п/г '+s):'вся группа'}</option>`).join('')}</select>
+        <label class="check" style="margin:0"><input type="checkbox" data-f="cancel" ${cancel?'checked':''}> пары нет</label>
+        <span class="sp"></span>
+        <button class="iconbtn" data-del="${i}" title="Удалить строку">✕</button>
+      </div>
+      ${cancel ? '<div style="color:var(--red);font-weight:800;font-size:13.5px">Пара отменена</div>' : `
+      <div class="rgrid">
+        <input data-f="subject" placeholder="Предмет" value="${esc(r.to.subject)}">
+        <input data-f="teacher" placeholder="Преподаватель" value="${esc(r.to.teacher)}">
+        <input data-f="room" placeholder="Аудитория" value="${esc(r.to.room)}">
+      </div>`}
+      ${r.from && r.from.subject ? `<div class="rfrom">Было: <s>${esc(r.from.subject)} · ${esc(r.from.teacher||'—')} · ${esc(r.from.room||'—')}</s></div>` : ''}
+    </div>`;
+  }).join('') || '<div class="empty">Нет строк под текущий фильтр.</div>';
 
-$('go').onclick = async () => {
-  const files = Array.from($('file').files || []);
-  if (!files.length) return say('Выберите одну или несколько фотографий.');
-  sessionStorage.setItem('pw', $('pw').value);
-  $('go').disabled = true;
-  $('pub').hidden = true;
-  const combined = new Map();
-  const failures = [];
-  let totalRecognized = 0;
-  let duplicates = 0;
-  try {
-    // Сначала будим контейнер Layero, чтобы не ловить backend_starting.
-    say('Проверяю сервер…');
-    await wakeBackend();
-
-    // Отправляем изображения по одному: так не превышаем лимит размера одного запроса.
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      say(`Распознаю фотографию ${i + 1} из ${files.length}: ${file.name}`);
-      try {
-        const image = await shrink(file);
-        const j = await parseWithRetry({ image, media_type: 'image/jpeg' }, file.name);
-        const rows = Array.isArray(j.rows) ? j.rows : [];
-        totalRecognized += Number(j.total) || rows.length;
-
-        // Даже при HTTP 200 и пустых rows показываем диагностику
-        if (!rows.length) {
-          const parts = [
-            `total=${j.total ?? 0}`,
-            j.scriptVersion || null,
-            j.debug ? `stage=${j.debug.stage}` : null,
-            j.debug ? `ocrLen=${j.debug.ocrTextLength}` : null,
-            (j.debug?.baiduError || j.error) ? `baiduError=${String(j.debug?.baiduError || j.error).slice(0, 220)}` : null,
-            Array.isArray(j.baiduLogs) && j.baiduLogs.length
-              ? `logs=${j.baiduLogs.slice(-4).join(' ; ').slice(0, 280)}`
-              : null,
-            j.debug?.ocrPreview ? `ocr=${String(j.debug.ocrPreview).slice(0, 100)}` : null,
-            Array.isArray(j.sample) && j.sample.length ? `sample=${JSON.stringify(j.sample).slice(0, 120)}` : null
-          ].filter(Boolean);
-          failures.push(`${file.name}: пусто (${parts.join(', ') || 'нет debug — задеплоен старый parse.js'})`);
-        }
-
-        for (const row of rows) {
-          const key = `${row.group}|${row.pair}|${row.sub || 0}`;
-          if (combined.has(key)) duplicates++;
-          combined.set(key, row);
-        }
-      } catch (e) {
-        failures.push(`${file.name}: ${e.message}`);
-      }
-    }
-
-    const rows = Array.from(combined.values());
-    if (!rows.length) {
-      $('json').hidden = true;
-      $('pub').hidden = true;
-      return say('Не удалось распознать ни одной строки. ' + (failures.length ? failures.join(' | ') : 'Нет деталей'));
-    }
-
-    $('json').value = JSON.stringify(rows, null, 1);
-    $('json').hidden = false;
-    $('pub').hidden = false;
-    show(rows);
-    let message = `Обработано фотографий: ${files.length - failures.length} из ${files.length}. Найдено строк: ${rows.length}. Проверьте результат и опубликуйте.`;
-    if (duplicates) message += ` Повторяющихся записей объединено: ${duplicates}. Для повторов использовано последнее фото.`;
-    if (failures.length) message += ` Не удалось обработать: ${failures.join(' | ')}`;
-    say(message);
-  } catch (e) {
-    say('Ошибка: ' + e.message);
-  } finally {
-    $('go').disabled = false;
-  }
+  $('rows').querySelectorAll('.rrow').forEach(el => {
+    const i = +el.dataset.i; const r = state.rows[i];
+    el.querySelectorAll('[data-f]').forEach(inp => {
+      inp.onchange = () => {
+        const f = inp.dataset.f;
+        if (f === 'group') r.group = inp.value;
+        else if (f === 'pair') r.pair = Number(inp.value);
+        else if (f === 'sub') r.sub = Number(inp.value);
+        else if (f === 'cancel'){ r.to = inp.checked ? null : { subject:'', teacher:'', room:'' }; renderRows(); }
+        else if (r.to) r.to[f] = inp.value;
+        $('count').textContent = `${filteredRows().length} из ${state.rows.length} строк`;
+      };
+    });
+    el.querySelector('[data-del]').onclick = () => {
+      const [removed] = state.rows.splice(i,1);
+      renderRows();
+      toast('Строка удалена', () => { state.rows.splice(Math.min(i,state.rows.length),0,removed); state.rows.sort(cmpRows); renderRows(); });
+    };
+  });
+}
+function renderWarnings(){
+  const w = [...new Set(state.warnings)];
+  $('warns').classList.toggle('show', !!w.length);
+  $('warnList').innerHTML = w.map(x=>`<li>${esc(x)}</li>`).join('');
+}
+$('filter').oninput = renderRows;
+$('groupFilter').onchange = renderRows;
+$('delFiltered').onclick = () => {
+  const list = filteredRows();
+  if (!list.length) return;
+  const backup = state.rows.slice();
+  state.rows = state.rows.filter(r => !list.includes(r));
+  renderRows();
+  toast(`Удалено строк: ${list.length}`, () => { state.rows = backup; renderRows(); });
 };
 
+/* ---------- publish ---------- */
 $('pub').onclick = async () => {
-  let rows;
-  try { rows = JSON.parse($('json').value); } catch { return say('JSON некорректен.'); }
-  if (!$('date').value) return say('Выберите дату.');
-  say('Публикую…');
+  if (!$('pw').value) return say($('pubMsg'), 'Введите пароль.', 'err');
+  if (!$('date').value) return say($('pubMsg'), 'Выберите дату.', 'err');
+  if (!state.rows.length) return say($('pubMsg'), 'Нет строк для публикации.', 'err');
+  $('pub').disabled = true;
+  say($('pubMsg'), 'Публикую…', 'warn');
   try {
-    const r = await fetch('/api/replacements', { method: 'POST', headers: headers(), body: JSON.stringify({ date: $('date').value, rows }) });
-    const raw = await r.text();
-    let j = {};
-    try { j = JSON.parse(raw); } catch {}
-    if (r.ok) return say('Опубликовано. На сайте обновится в течение минуты.');
-    say(`Ошибка ${r.status}: ${j.error || raw.slice(0, 150) || 'нет ответа'}`);
-  } catch (e) { say('Ошибка сети: ' + e.message); }
+    const rows = state.rows.slice().sort(cmpRows);
+    const r = await fetch('/api/replacements', { method:'POST', headers:headers(), body:JSON.stringify({ date:$('date').value, rows }) });
+    await readApiResponse(r);
+    say($('pubMsg'), `Опубликовано ${rows.length} строк на ${$('date').value}. Сайт обновится в течение минуты.`, 'ok');
+    toast('Замены опубликованы');
+  } catch (e){ say($('pubMsg'), 'Не удалось опубликовать: ' + e.message, 'err'); }
+  finally { $('pub').disabled = false; }
 };
-loadNoticeSettings();
-</script></body></html>
+
+/* ---------- notice ---------- */
+async function loadNotice(){
+  try {
+    const r = await fetch('/api/site-notice', { cache:'no-store' });
+    const j = await readApiResponse(r);
+    $('noticeShow').checked = Boolean(j.show);
+    $('noticeTitle').value = j.title || 'Временно не работает';
+    $('noticeSub').value = j.sub || 'Ведутся технические работы. Загляните позже.';
+  } catch (e){ say($('noticeMsg'), 'Не удалось загрузить настройки: ' + e.message, 'err'); }
+}
+$('noticeSave').onclick = async () => {
+  if (!$('pw').value) return say($('noticeMsg'), 'Введите пароль.', 'err');
+  sessionStorage.setItem('pw', $('pw').value);
+  say($('noticeMsg'), 'Сохраняю…', 'warn');
+  try {
+    const r = await fetch('/api/site-notice', { method:'POST', headers:headers(), body:JSON.stringify({
+      show: $('noticeShow').checked, title: $('noticeTitle').value.trim(), sub: $('noticeSub').value.trim()
+    })});
+    await readApiResponse(r);
+    say($('noticeMsg'), 'Настройки сохранены. Сайт обновится примерно за 30 секунд.', 'ok');
+  } catch (e){ say($('noticeMsg'), 'Не удалось сохранить: ' + e.message, 'err'); }
+};
+
+/* ---------- init ---------- */
+const t = new Date(Date.now() + 864e5);
+$('date').value = `${t.getFullYear()}-${pad(t.getMonth()+1)}-${pad(t.getDate())}`;
+$('pw').value = sessionStorage.getItem('pw') || '';
+loadNotice();
+</script>
+</body>
+</html>
