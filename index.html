@@ -14,6 +14,7 @@
   <!-- Android-приложение: адрес API, проверка обновлений, кнопка «Назад» (в браузере ничего не делают) -->
   <script src="app-config.js"></script>
   <script src="app-update.js" defer></script>
+  <script src="app-notify.js" defer></script>
   <script>
     window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
   </script>
@@ -892,6 +893,16 @@ a.download-option:hover { transform:translateY(-2px); border-color:rgba(34,197,9
           <div class="row">
             <div class="row-text"><div class="row-title">Показывать аудитории</div><p class="row-desc">Номер аудитории в карточке пары.</p></div>
             <button type="button" role="switch" aria-checked="true" aria-label="Показывать аудитории" data-setting="rooms" class="switch"><span class="switch-knob"></span></button>
+          </div>
+        </div>
+      </section>
+
+      <section class="set-group" id="notify-group">
+        <h3>Уведомления</h3>
+        <div class="stack">
+          <div class="row">
+            <div class="row-text"><div class="row-title">Уведомлять о заменах</div><p class="row-desc">Сообщение, когда для вашей группы опубликованы или изменены замены. Приходит, пока приложение открыто, и при его открытии.</p></div>
+            <button id="notify-switch" type="button" role="switch" aria-checked="false" aria-label="Уведомлять о заменах" data-setting="notify" class="switch"><span class="switch-knob"></span></button>
           </div>
         </div>
       </section>
@@ -3763,6 +3774,7 @@ const SCHEDULE_KSK_24_3 = {
           lastSig = '';
           updateDays();
           renderSchedule(false);
+          try { if (window.replNotify) window.replNotify(REPL, currentGroupId, settings.notify); } catch (e) {}
         } catch (error) {
           // При временной ошибке сохраняем последние успешно загруженные замены.
           console.warn('Не удалось обновить замены расписания:', error);
@@ -4003,8 +4015,8 @@ const SCHEDULE_KSK_24_3 = {
     ];
     const mqLight = window.matchMedia ? window.matchMedia('(prefers-color-scheme: light)') : null;
     const resolveTheme = (id) => id === 'auto' ? (mqLight && mqLight.matches ? 'cloud' : 'sakura') : id;
-    const DEFAULT_SETTINGS = { theme: 'sakura', glass: true, fontSize: 'md', motion: true, compact: false, teachers: true, rooms: true, askGroup: false, fontFamily: 'custom' };
-    const BOOL_KEYS = ['glass', 'motion', 'compact', 'teachers', 'rooms', 'askGroup'];
+    const DEFAULT_SETTINGS = { theme: 'sakura', glass: true, fontSize: 'md', motion: true, compact: false, teachers: true, rooms: true, askGroup: false, notify: false, fontFamily: 'custom' };
+    const BOOL_KEYS = ['glass', 'motion', 'compact', 'teachers', 'rooms', 'askGroup', 'notify'];
     let settings = { ...DEFAULT_SETTINGS };
 
     function loadSettings() {
@@ -4096,6 +4108,20 @@ const SCHEDULE_KSK_24_3 = {
       document.querySelectorAll('.switch[data-setting]').forEach((sw) => sw.addEventListener('click', () => {
         const k = sw.dataset.setting; settings[k] = !settings[k]; saveSettings(); applySettings();
       }));
+      // Уведомления о заменах: при включении просим разрешение и запоминаем текущие замены, чтобы не слать старые.
+      const notifySwitch = $('notify-switch');
+      if (notifySwitch) {
+        if (!(window.replNotifySupported && window.replNotifySupported())) {
+          const grp = $('notify-group'); if (grp) grp.hidden = true;
+        }
+        notifySwitch.addEventListener('click', () => {
+          if (!settings.notify) return;
+          Promise.resolve(window.replNotifyEnable ? window.replNotifyEnable() : false).then((ok) => {
+            if (!ok) { settings.notify = false; saveSettings(); applySettings(); return; }
+            try { if (window.replNotify) window.replNotify(REPL, currentGroupId, true, true); } catch (e) {}
+          });
+        });
+      }
       document.querySelectorAll('#fs-seg button').forEach((b) => b.addEventListener('click', () => { settings.fontSize = b.dataset.value; saveSettings(); applySettings(); }));
       document.querySelectorAll('#ff-seg button').forEach((b) => b.addEventListener('click', () => { settings.fontFamily = b.dataset.value; saveSettings(); applySettings(); }));
       $('settings-change-group').addEventListener('click', () => { closeSettings(); showGroupMenu(); });
