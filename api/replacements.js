@@ -10,11 +10,19 @@ module.exports = async (req, res) => {
     }
     if (req.method === 'POST') {
       if (!authed(req)) return res.status(401).json({ error: 'Неверный пароль' });
-      const { date, rows } = req.body || {};
+      const { date, rows, merge } = req.body || {};
       if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Array.isArray(rows)) return res.status(400).json({ error: 'Неверные данные' });
       const data = await load();
-      const byGroup = {};
-      rows.forEach((r) => { (byGroup[r.group] = byGroup[r.group] || []).push({ pair: r.pair, sub: r.sub || 0, to: r.to || null }); });
+      // merge: true — добавить строки к уже опубликованным на эту дату (строка с тем же номером пары
+      // и подгруппой заменяется), остальное не трогаем. Без merge дата перезаписывается целиком.
+      const byGroup = merge === true && data[date] && typeof data[date] === 'object' ? data[date] : {};
+      rows.forEach((r) => {
+        const pair = Number(r.pair);
+        const sub = Number(r.sub) || 0;
+        const list = (byGroup[r.group] || []).filter((x) => !(Number(x.pair) === pair && (Number(x.sub) || 0) === sub));
+        list.push({ pair, sub, to: r.to || null });
+        byGroup[r.group] = list;
+      });
       data[date] = byGroup;
       const limit = dstr(new Date(Date.now() - 14 * 86400000));
       Object.keys(data).forEach((k) => { if (k < limit) delete data[k]; });

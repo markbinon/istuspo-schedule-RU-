@@ -381,6 +381,11 @@
     .pair.ongoing .pair-card::before { opacity: 1; width: 5px; }
     .pair.replaced .pair-card { border-color: rgb(var(--warn) / .42); }
     .pair.partial .pair-card { border-color: rgb(var(--bad) / .42); }
+    .was-box { margin: .1rem 0 .45rem; }
+    .was-old { display: flex; align-items: flex-start; gap: .45rem; padding: .4rem .6rem; border-radius: var(--r-sm); font-size: .8rem; line-height: 1.4; background: rgb(var(--bad) / .09); border: 1px solid rgb(var(--bad) / .28); }
+    .was-old s { min-width: 0; color: rgb(var(--text) / .62); text-decoration-color: rgb(var(--bad) / .75); overflow-wrap: anywhere; }
+    .was-tag { flex: none; font-size: .68rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; padding-top: .12rem; color: rgb(var(--bad)); }
+    .was-arrow { margin: .3rem 0 0 .15rem; font-size: .7rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: rgb(var(--warn)); }
     .pair-head { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; margin-bottom: .35rem; }
     .pair-num { font-size: .64rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: rgb(var(--accent)); padding: .14rem .55rem; border-radius: 9999px; background: rgb(var(--accent) / .13); margin-right: .1rem; }
     .pair-name { font-size: 1.04rem; font-weight: 700; line-height: 1.32; letter-spacing: -.01em; overflow-wrap: break-word; }
@@ -3724,7 +3729,10 @@ const SCHEDULE_KSK_24_3 = {
 
         if (sub === 0) {
           if (!r.to) { p.cancelled = true; p.subs = []; return; }
+          // «Было»: пара из основного расписания, которую заменяет эта строка.
+          const was = p.was || (p.name ? { name: p.name, teacher: p.teacher || '', room: p.room || '' } : null);
           Object.assign(p, {
+            was,
             name: r.to.subject, teacher: r.to.teacher || '',
             // Если в листе замен аудитория не указана — оставляем аудиторию из основного расписания
             room: r.to.room ? 'ауд. ' + String(r.to.room).replace(/^ауд\.?\s*/i, '') : (p.room || ''),
@@ -3962,9 +3970,9 @@ const SCHEDULE_KSK_24_3 = {
           const subBadge = sm ? `<span class="badge badge-sub">п/г ${esc(sm[1])}</span>` : '';
           const badges = [
             subBadge,
-            it.cancelled ? '<span class="badge badge-bad">Пары нет</span>' : '',
-            subCx ? `<span class="badge badge-bad">Пары нет: ${esc(subCx)}</span>` : '',
-            it.replaced ? `<span class="badge badge-warn">${subRp ? 'Замена: ' + esc(subRp) : 'Замена'}</span>` : '',
+            it.cancelled ? '<span class="badge badge-bad">Отмена</span>' : '',
+            subCx ? `<span class="badge badge-bad">Отмена: ${esc(subCx)}</span>` : '',
+            it.replaced ? `<span class="badge badge-warn">${subRp ? 'Заменено: ' + esc(subRp) : 'Заменено'}</span>` : '',
             ongoing ? '<span class="badge badge-live"><i></i>Идёт сейчас</span>' : '',
             it.num === nextNum ? '<span class="badge badge-today">Следующая</span>' : ''
           ].join('');
@@ -3972,17 +3980,26 @@ const SCHEDULE_KSK_24_3 = {
             it.teacher ? `<span class="chip js-teacher">${svg('user')}${esc(it.teacher)}</span>` : '',
             roomText ? `<span class="chip js-room">${svg('pin')}${esc(roomText)}</span>` : ''
           ].join('');
+          // «Было → стало»: показываем, только если замена действительно что-то поменяла.
+          const norm = (v) => String(v || '').replace(/^ауд\.?\s*/i, '').trim().toLowerCase();
+          const w = it.replaced && !it.cancelled ? it.was : null;
+          const wasChanged = !!w && (norm(w.name) !== norm(it.name) || norm(w.teacher) !== norm(it.teacher) || norm(w.room) !== norm(it.room));
+          const swapHtml = wasChanged ? `
+                <div class="was-box">
+                  <div class="was-old"><span class="was-tag">Было</span><s>${esc([w.name, w.teacher, w.room].filter(Boolean).join(' · '))}</s></div>
+                  <div class="was-arrow" aria-hidden="true">↓ Стало</div>
+                </div>` : '';
           const subsHtml = subs.length ? `<ul class="subs">${subs.map((s) => `
                   <li class="sub-row${s.cancelled ? ' cx' : ''}">
                     <span class="sub-tag">п/г ${esc(s.sub)}</span>
-                    <span class="sub-text">${s.cancelled ? 'Пары нет' : esc([s.name, s.teacher, s.room].filter(Boolean).join(' · '))}</span>
+                    <span class="sub-text">${s.cancelled ? 'Отмена' : esc([s.name, s.teacher, s.room].filter(Boolean).join(' · '))}</span>
                   </li>`).join('')}</ul>` : '';
           listHtml += `
             <li class="${cls}" style="--i:${idx++}">
               <div class="pair-time"><b>${esc(fmt(it.start))}</b><span>${esc(fmt(it.end))}</span></div>
               <div class="rail"><i class="dot"></i></div>
               <article class="pair-card surface">
-                <div class="pair-head"><span class="pair-num">${esc(it.num)} пара</span>${badges}</div>
+                <div class="pair-head"><span class="pair-num">${esc(it.num)} пара</span>${badges}</div>${swapHtml}
                 <h3 class="pair-name">${esc(pairTitle(it))}</h3>
                 ${chips ? `<div class="meta">${chips}</div>` : ''}
                 ${subsHtml}

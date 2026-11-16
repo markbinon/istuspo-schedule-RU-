@@ -131,6 +131,8 @@ textarea{resize:vertical;min-height:74px}
     </div>
     <input id="file" type="file" accept="image/*" multiple class="hidden">
     <div class="files" id="files"></div>
+    <label class="check" style="margin-top:14px"><input id="autoPub" type="checkbox"> Сразу добавлять распознанные пары в публикацию на выбранную дату</label>
+    <p style="margin:-2px 0 0 28px;font-size:12.5px;color:var(--dim)">Пары сами попадают на сайт, уже опубликованные на эту дату не затираются. Строки с ошибками (неизвестная группа, нет предмета) остаются в списке ниже для проверки.</p>
     <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
       <button class="btn" id="go">Распознать фотографии</button>
       <button class="btn ghost" id="clear">Очистить</button>
@@ -291,6 +293,7 @@ $('go').onclick = async () => {
   state.busy = true; $('go').disabled = true; $('pub').disabled = true;
   state.warnings = [];
   const combined = new Map(state.rows.map(r => [key(r), r]));
+  const fresh = new Map(); // строки, распознанные в этом запуске
   let okCount = 0, dup = 0;
   try {
     say($('msg'), 'Проверяю сервер…', 'warn');
@@ -317,6 +320,7 @@ $('go').onclick = async () => {
             if (!clean) continue;
             if (combined.has(key(clean))) dup++;
             combined.set(key(clean), clean);
+            fresh.set(key(clean), clean);
           }
           f.status = 'ok'; f.note = `${rows.length} строк`; okCount++;
         }
@@ -327,6 +331,7 @@ $('go').onclick = async () => {
     renderRows(); renderWarnings();
     const failed = state.files.filter(f => f.status === 'err').length;
     say($('msg'), `Готово: обработано ${okCount}, с ошибками ${failed}, строк ${state.rows.length}${dup ? `, повторов объединено ${dup}` : ''}.`, failed ? 'warn' : 'ok');
+    if ($('autoPub').checked && fresh.size) await autoPublish(Array.from(fresh.values()));
   } catch (e){ say($('msg'), 'Ошибка: ' + e.message, 'err'); }
   finally { state.busy = false; $('go').disabled = false; $('pub').disabled = false; }
 };
@@ -411,6 +416,35 @@ $('delFiltered').onclick = () => {
   renderRows();
   toast(`Удалено строк: ${list.length}`, () => { state.rows = backup; renderRows(); });
 };
+
+/* ---------- auto publish ---------- */
+// Что мешает добавить строку в публикацию без проверки человеком.
+function rowIssue(r){
+  if (!D.GROUPS.some(g => g.id === r.group)) return 'неизвестная группа';
+  if (!(r.pair >= 1 && r.pair <= 6)) return 'неверный номер пары';
+  if (r.to !== null && !(r.to && r.to.subject)) return 'не указан предмет';
+  return '';
+}
+async function autoPublish(freshRows){
+  if (!$('date').value) return say($('pubMsg'), 'Автодобавление пропущено: выберите дату действия замен.', 'err');
+  const ok = [], skipped = [];
+  for (const r of freshRows){
+    const issue = rowIssue(r);
+    if (issue) skipped.push(`${r.group}, пара ${r.pair}: ${issue}`); else ok.push(r);
+  }
+  if (skipped.length) state.warnings.push(...skipped.map(x => 'Не добавлено автоматически — ' + x));
+  renderWarnings();
+  if (!ok.length) return say($('pubMsg'), 'Автодобавление: нет строк без ошибок. Проверьте список ниже.', 'warn');
+  say($('pubMsg'), 'Добавляю распознанные пары в публикацию…', 'warn');
+  try {
+    const r = await fetch('/api/replacements', { method:'POST', headers:headers(), body:JSON.stringify({ date:$('date').value, rows:ok.sort(cmpRows), merge:true }) });
+    await readApiResponse(r);
+    say($('pubMsg'), `Автоматически добавлено в публикацию: ${ok.length} пар на ${$('date').value}${skipped.length ? `. Требуют проверки: ${skipped.length}` : ''}. Сайт обновится в течение минуты.`, skipped.length ? 'warn' : 'ok');
+    toast(`В публикацию добавлено пар: ${ok.length}`);
+  } catch (e){ say($('pubMsg'), 'Не удалось добавить в публикацию: ' + e.message + '. Строки остались в списке, их можно опубликовать вручную.', 'err'); }
+}
+try { $('autoPub').checked = localStorage.getItem('ksk-admin-autopub') === '1'; } catch {}
+$('autoPub').onchange = () => { try { localStorage.setItem('ksk-admin-autopub', $('autoPub').checked ? '1' : '0'); } catch {} };
 
 /* ---------- publish ---------- */
 $('pub').onclick = async () => {
