@@ -1,5 +1,4 @@
 
-/* PWA: свежие файлы с сервера, кэш только офлайн */
 var CACHE = 'schedule-v2';
 
 var SHELL = [
