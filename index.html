@@ -953,12 +953,6 @@ a.download-option:hover { transform:translateY(-2px); border-color:rgba(34,197,9
     </div>
   </div>
 
-  <!-- СКОРО: накрывает главный экран. Чтобы убрать, поставьте SOON_MODE = false внизу файла -->
-  <div id="soon" role="dialog" aria-modal="true" aria-label="Скоро">
-    <h2 class="soon-word">Скоро</h2>
-    <div class="soon-tape" aria-hidden="true"><div class="soon-track"><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span></div></div>
-  </div>
-
   <!-- Настройки -->
   <div id="settings-overlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="settings-title">
     <div id="settings-backdrop" class="scrim"></div>
@@ -4561,7 +4555,7 @@ const SCHEDULE_KSK_24_3 = {
 
   <script>
   /* Режим «Скоро»: true — поверх главного экрана лента и надпись, false — сайт работает как обычно */
-  var SOON_MODE = true;
+  var SOON_MODE = false;
   (function () {
     var el = document.getElementById('soon');
     if (!el) return;
