@@ -731,6 +731,29 @@ a.download-option:hover { transform:translateY(-2px); border-color:rgba(34,197,9
     html.gm-open .app { opacity: 0; transform: scale(1.035) translateY(10px); }
     html.gm-entering .app { opacity: 1; transform: none; transition: opacity .9s ease 1.15s, transform 1.2s var(--ease) 1.15s; }
 
+    /* =====================================================
+       «Скоро»: размытый фон, лента Coming soon и надпись по центру
+       Выключается одной константой SOON_MODE в конце файла
+       ===================================================== */
+    #soon { position: fixed; inset: 0; z-index: 2100; display: grid; place-items: center; overflow: hidden; color: #fff;
+      background: rgb(6 14 26 / .4); -webkit-backdrop-filter: blur(16px) saturate(120%); backdrop-filter: blur(16px) saturate(120%);
+      animation: soon-in 1s ease both; }
+    #soon[hidden] { display: none; }
+    .soon-word { position: relative; z-index: 2; margin: 0; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; line-height: 1;
+      font-size: min(17vw, 21vh); text-shadow: 0 6px 60px rgb(0 0 0 / .45); animation: soon-rise 1.3s var(--ease) .15s both; }
+    .soon-tape { position: absolute; z-index: 1; left: -12vw; right: -12vw; top: 74%; height: clamp(2.6rem, 6.5vh, 3.8rem); display: flex; align-items: center; overflow: hidden;
+      background: rgb(255 196 112); color: #12233a; transform: rotate(-6deg); box-shadow: 0 18px 50px -14px rgb(0 0 0 / .6);
+      animation: soon-tape 1.2s var(--ease) .3s both; }
+    .soon-track { display: flex; flex: none; width: max-content; font-weight: 900; text-transform: uppercase; letter-spacing: .22em; white-space: nowrap;
+      font-size: clamp(.85rem, 2.4vh, 1.15rem); animation: soon-run 28s linear infinite; will-change: transform; }
+    .soon-track span { padding: 0 1.1rem; }
+    @keyframes soon-in { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes soon-rise { from { opacity: 0; transform: translate3d(0, 4vh, 0) scale(.96); filter: blur(12px); } to { opacity: 1; transform: none; filter: none; } }
+    @keyframes soon-tape { from { opacity: 0; transform: translate3d(-8vw, 0, 0) rotate(-6deg); } to { opacity: 1; transform: rotate(-6deg); } }
+    @keyframes soon-run { to { transform: translate3d(-50%, 0, 0); } }
+    html[data-motion="off"] .soon-track, html[data-motion="off"] #soon, html[data-motion="off"] .soon-word, html[data-motion="off"] .soon-tape { animation: none; }
+    @media (prefers-reduced-motion: reduce) { .soon-track { animation: none; } }
+
     /* Наклонные панели вместо плоской шапки дня */
     .dayhead { position: relative; align-items: center; padding: 1.15rem 3.1rem 1.15rem 1.35rem; color: #fff; border-radius: .35rem 0 0 .35rem;
       background: linear-gradient(105deg, rgb(var(--accent2)) 0%, rgb(var(--strong)) 100%);
@@ -951,6 +974,12 @@ a.download-option:hover { transform:translateY(-2px); border-color:rgba(34,197,9
         <div id="group-list" class="gm-list"></div>
       </div>
     </div>
+  </div>
+
+  <!-- СКОРО: накрывает главный экран. Чтобы убрать, поставьте SOON_MODE = false внизу файла -->
+  <div id="soon" role="dialog" aria-modal="true" aria-label="Скоро">
+    <h2 class="soon-word">Скоро</h2>
+    <div class="soon-tape" aria-hidden="true"><div class="soon-track"><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span></div></div>
   </div>
 
   <!-- Настройки -->
@@ -4553,5 +4582,15 @@ const SCHEDULE_KSK_24_3 = {
     })();
   </script>
 
+  <script>
+  /* Режим «Скоро»: true — поверх главного экрана лента и надпись, false — сайт работает как обычно */
+  var SOON_MODE = true;
+  (function () {
+    var el = document.getElementById('soon');
+    if (!el) return;
+    if (!SOON_MODE) { el.remove(); return; }
+    ['group-menu', 'app'].forEach(function (id) { var n = document.getElementById(id); if (n) n.setAttribute('inert', ''); });
+  })();
+  </script>
 </body>
   </html>
