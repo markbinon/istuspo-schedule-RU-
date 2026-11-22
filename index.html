@@ -699,8 +699,13 @@ a.download-option:hover { transform:translateY(-2px); border-color:rgba(34,197,9
       #group-menu .gm-sheet { flex-direction: row; align-items: center; justify-content: space-between; padding: 3rem 4rem; gap: 3rem; }
       #group-menu .gm-head { align-self: flex-start; max-width: 36rem; }
       .gm-word { font-size: 6.4vw; }
-      .gm-pick { width: 26rem; flex: none; }
-      #group-menu .gm-list { max-height: 52vh; }
+      .gm-pick { width: 23rem; flex: none; }
+      /* На ПК все группы курса видны сразу: компактные строки «группа · специальность» */
+      #group-menu .gm-list { max-height: calc(100vh - 12rem); max-height: calc(100dvh - 12rem); gap: .3rem; }
+      #group-menu .gm-btn { padding: .3rem .9rem .3rem 1.05rem; border-radius: .8rem; }
+      #group-menu .gm-btn > span:first-child { display: flex; align-items: baseline; gap: .6rem; min-width: 0; }
+      #group-menu .gm-name { font-size: .98rem; flex: none; }
+      #group-menu .gm-meta { margin: 0; font-size: .7rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     }
     @media (min-aspect-ratio: 1/1) and (max-width: 899px) {
       #group-menu .gm-sheet { flex-direction: row; align-items: center; gap: 1.5rem; }
