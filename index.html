@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Расписание СПО МСК</title>
-  <meta name="theme-color" content="#0d060a">
+  <meta name="theme-color" content="#060e1a">
   <meta name="color-scheme" content="dark light">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -13,6 +13,7 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23db2777'/%3E%3Cpath d='M9 12h14M9 17h14M9 22h8' stroke='white' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
   <!-- Веб-приложение (PWA): установка на экран «Домой» на iPhone и в браузерах -->
   <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="preload" as="image" href="college.jpg">
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
   <script src="app-pwa.js" defer></script>
   <!-- Android-приложение: адрес API, проверка обновлений, кнопка «Назад» (в браузере ничего не делают) -->
@@ -26,11 +27,13 @@
   <script>
     /* Применяем сохранённые настройки до первой отрисовки, чтобы не было мигания */
     (function () {
-      var r = document.documentElement, t = 'sakura', g = 'on', f = 'md', m = 'on', c = 'off', te = 'on', ro = 'on', ff = 'custom';
+      var r = document.documentElement, t = 'lantern', g = 'on', it = 'on', f = 'md', m = 'on', c = 'off', te = 'on', ro = 'on', ff = 'custom';
       try {
         var st = JSON.parse(localStorage.getItem('ksk-settings') || '{}');
         if (typeof st.theme === 'string' && /^[a-z]+$/.test(st.theme)) t = st.theme;
         if (st.glass === false) g = 'off';
+        if (st.intro === false) it = 'off';
+        if (st.askGroup === true) r.classList.add('gm-open');
         if (st.fontSize === 'sm' || st.fontSize === 'lg') f = st.fontSize;
         if (st.motion === false) m = 'off';
         if (st.compact === true) c = 'on';
@@ -38,8 +41,9 @@
         if (st.rooms === false) ro = 'off';
         if (st.fontFamily === 'system') ff = 'system';
       } catch (e) {}
-      if (t === 'auto') t = (window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches) ? 'cloud' : 'sakura';
-      r.dataset.theme = t; r.dataset.glass = g; r.dataset.fs = f; r.dataset.motion = m;
+      if (t === 'auto') t = (window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches) ? 'cloud' : 'lantern';
+      try { if (!localStorage.getItem('ksk-group')) r.classList.add('gm-open'); } catch (e) { r.classList.add('gm-open'); }
+      r.dataset.theme = t; r.dataset.intro = it; r.dataset.glass = g; r.dataset.fs = f; r.dataset.motion = m;
       r.dataset.compact = c; r.dataset.teachers = te; r.dataset.rooms = ro; r.dataset.ff = ff;
     })();
   </script>
@@ -232,7 +236,7 @@
       position: absolute; top: .25rem; bottom: .25rem; left: .25rem; width: calc(50% - .25rem);
       border-radius: 9999px; background: linear-gradient(135deg, rgb(var(--strong)), rgb(var(--accent2)));
       box-shadow: 0 8px 18px -8px rgb(var(--strong) / .85), inset 0 1px 0 rgb(255 255 255 / .3);
-      transition: transform .38s var(--ease);
+      transition: transform .55s var(--ease);
     }
     .week[data-week="bottom"] .week-thumb { transform: translateX(100%); }
     .week button {
@@ -354,7 +358,7 @@
        Таймлайн пар
        ===================================================== */
     .timeline { display: flex; flex-direction: column; }
-    .timeline.anim .pair, .timeline.anim .gap-row, .timeline.anim .empty { animation: rise .55s var(--ease) backwards; animation-delay: calc(var(--i, 0) * 55ms); }
+    .timeline.anim .pair, .timeline.anim .gap-row, .timeline.anim .empty { animation: rise .8s var(--ease) backwards; animation-delay: calc(var(--i, 0) * 60ms); }
     @keyframes rise { from { opacity: 0; transform: translate3d(var(--dx, 0px), 14px, 0); } to { opacity: 1; transform: none; } }
 
     .pair { --st: var(--accent); display: grid; grid-template-columns: 3.4rem .9rem minmax(0, 1fr); column-gap: .45rem; padding-bottom: .7rem; position: relative; }
@@ -646,6 +650,128 @@ a.download-option:hover { transform:translateY(-2px); border-color:rgba(34,197,9
   .download-app-trigger, .download-option { transition:none; }
 }
 
+
+    /* =====================================================
+       Lantern: кинематографичный стиль (заставка, наклонные панели)
+       ===================================================== */
+    html[data-theme="lantern"] { --bg: 6 14 26; --bg2: 22 66 110; --surface: 14 26 44; --text: 236 245 250; --accent: 255 196 112; --accent2: 138 92 52; --strong: 176 116 62; --glow1: 255 176 80; --glow2: 60 150 220; --shadow: 2 6 14; }
+
+    /* =====================================================
+       Главный экран = выбор группы на фоне колледжа
+       Анимация входа запускается нажатием на группу (не прокруткой)
+       ===================================================== */
+    #group-menu { --text: 236 245 250; --line: 255 255 255 / .16; --accent: 255 196 112; --strong: 176 116 62; --accent2: 138 92 52;
+      color-scheme: dark; color: #fff; z-index: 2000; padding: 0; align-items: stretch; justify-content: stretch; background: rgb(6 14 26); overflow: hidden;
+      transition: opacity .6s ease; }
+    #group-menu .scrim { display: none; }
+    .gm-stage { position: absolute; inset: 0; overflow: hidden; }
+    .gm-zoom { position: absolute; inset: 0; transform-origin: var(--ox, 50%) var(--oy, 80%); will-change: transform; backface-visibility: hidden; transition: transform 1.7s cubic-bezier(.2, .7, .15, 1); }
+    .gm-photo { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 80%; opacity: 0;
+      transition: opacity 1s ease; animation: gm-kb 20s ease-in-out infinite alternate; will-change: transform; }
+    .gm-photo.is-loaded { opacity: 1; }
+    @keyframes gm-kb { from { transform: scale(1); } to { transform: scale(1.06); } }
+    .gm-shade { position: absolute; inset: 0; pointer-events: none;
+      background: linear-gradient(180deg, rgb(6 14 26 / .84) 0%, rgb(6 14 26 / .4) 28%, rgb(6 14 26 / .12) 52%, rgb(6 14 26 / .8) 100%); }
+    .gm-wash { position: absolute; inset: 0; pointer-events: none; opacity: 0; will-change: opacity; transition: opacity 1s ease .1s;
+      background: radial-gradient(circle at var(--ox, 50%) var(--oy, 80%), #fff6dc 0%, #ffd590 24%, rgb(232 160 80 / .9) 50%, rgb(120 70 30 / .5) 85%); }
+    #group-menu .gm-sheet { position: relative; z-index: 2; width: 100%; max-width: none; height: 100%; max-height: none; margin: 0; overflow: hidden;
+      padding: calc(1.25rem + env(safe-area-inset-top, 0px)) calc(1.1rem + env(safe-area-inset-right, 0px)) calc(1.1rem + env(safe-area-inset-bottom, 0px)) calc(1.1rem + env(safe-area-inset-left, 0px));
+      display: flex; flex-direction: column; justify-content: space-between; gap: 1rem;
+      background: none; border: 0; box-shadow: none; border-radius: 0; animation: none; -webkit-backdrop-filter: none; backdrop-filter: none;
+      transition: opacity .8s ease .65s, transform 1s var(--ease) .65s; }
+    #group-menu .grabber { display: none; }
+    #group-menu .gm-head { text-align: left; padding: 0; text-shadow: 0 2px 24px rgb(0 0 0 / .5); }
+    #group-menu .eyebrow { color: rgb(255 214 150); }
+    .gm-word { margin-top: .6rem; font-weight: 900; text-transform: uppercase; line-height: .9; letter-spacing: -.03em; font-size: 17vw; }
+    .gm-word span { display: block; }
+    #group-menu .gm-title { font-size: 1.15rem; margin-top: .9rem; letter-spacing: -.01em; }
+    #group-menu .gm-sub { color: rgb(255 255 255 / .8); margin-top: .25rem; font-size: .84rem; }
+    .gm-pick { display: flex; flex-direction: column; min-height: 0; padding: .8rem; border-radius: 1.3rem;
+      background: rgb(8 18 34 / .62); border: 1px solid rgb(255 255 255 / .16); box-shadow: 0 20px 50px -20px rgb(0 0 0 / .7);
+      -webkit-backdrop-filter: blur(16px) saturate(140%); backdrop-filter: blur(16px) saturate(140%); }
+    #group-menu .gm-seg { margin: 0 0 .7rem; }
+    #group-menu .gm-list { overflow-y: auto; max-height: 30vh; max-height: 30dvh; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding-right: .1rem; gap: .5rem; }
+    #group-menu .gm-btn { flex: none; padding: .75rem 1rem .75rem 1.2rem; }
+    #group-menu .gm-name { font-size: 1.15rem; }
+    @media (max-aspect-ratio: 1/1) {
+      .gm-photo { height: 56%; }
+      .gm-shade { background: linear-gradient(180deg, rgb(6 14 26 / .84) 0%, rgb(6 14 26 / .35) 26%, rgb(6 14 26 / 0) 40%, rgb(6 14 26) 56%); }
+    }
+    @media (max-aspect-ratio: 1/1) and (max-height: 700px) { #group-menu .gm-sub { display: none; } .gm-word { font-size: 14vw; } }
+    @media (min-aspect-ratio: 1/1) and (min-width: 900px) {
+      #group-menu .gm-sheet { flex-direction: row; align-items: center; justify-content: space-between; padding: 3rem 4rem; gap: 3rem; }
+      #group-menu .gm-head { align-self: flex-start; max-width: 36rem; }
+      .gm-word { font-size: 6.4vw; }
+      .gm-pick { width: 23rem; flex: none; }
+      /* На ПК все группы курса видны сразу: компактные строки «группа · специальность» */
+      #group-menu .gm-list { max-height: calc(100vh - 12rem); max-height: calc(100dvh - 12rem); gap: .3rem; }
+      #group-menu .gm-btn { padding: .3rem .9rem .3rem 1.05rem; border-radius: .8rem; }
+      #group-menu .gm-btn > span:first-child { display: flex; align-items: baseline; gap: .6rem; min-width: 0; }
+      #group-menu .gm-name { font-size: .98rem; flex: none; }
+      #group-menu .gm-meta { margin: 0; font-size: .7rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    }
+    @media (min-aspect-ratio: 1/1) and (max-width: 899px) {
+      #group-menu .gm-sheet { flex-direction: row; align-items: center; gap: 1.5rem; }
+      .gm-word { font-size: 9vw; } .gm-pick { width: 22rem; flex: none; } #group-menu .gm-list { max-height: 50dvh; }
+    }
+    /* Открытие экрана выбора: камера «отъезжает» от двери, свет гаснет, появляется панель */
+    #group-menu.is-opening { opacity: 0; }
+    #group-menu.is-opening .gm-zoom { transform: scale(3.2); }
+    #group-menu.is-opening .gm-wash { opacity: 1; }
+    #group-menu.is-opening .gm-sheet { opacity: 0; transform: translateY(18px); transition-delay: 0s; }
+    /* Вход в расписание: приближение к двери, вспышка света, плавное растворение в расписание */
+    #group-menu.is-entering { pointer-events: none; opacity: 0; transition: opacity .6s ease 1.25s; }
+    #group-menu.is-entering .gm-zoom { transform: scale(3.2); transition: transform 1.75s cubic-bezier(.7, 0, .2, 1); }
+    #group-menu.is-entering .gm-wash { opacity: 1; transition: opacity .8s ease .55s; }
+    #group-menu.is-entering .gm-sheet { opacity: 0; transform: translateY(18px); transition: opacity .45s ease, transform .6s var(--ease); }
+    html[data-motion="off"] .gm-photo { animation: none; }
+    @media (prefers-reduced-motion: reduce) { .gm-photo { animation: none; } }
+    /* Само расписание проявляется под растворяющимся экраном выбора */
+    .app { transition: opacity .6s ease, transform .9s var(--ease); }
+    html.gm-open .app { opacity: 0; transform: scale(1.035) translateY(10px); }
+    html.gm-entering .app { opacity: 1; transform: none; transition: opacity .9s ease 1.15s, transform 1.2s var(--ease) 1.15s; }
+
+    /* =====================================================
+       «Скоро»: размытый фон, лента Coming soon и надпись по центру
+       Выключается одной константой SOON_MODE в конце файла
+       ===================================================== */
+    #soon { position: fixed; inset: 0; z-index: 2100; display: grid; place-items: center; overflow: hidden; color: #fff;
+      background: rgb(6 14 26 / .4); -webkit-backdrop-filter: blur(16px) saturate(120%); backdrop-filter: blur(16px) saturate(120%);
+      animation: soon-in 1s ease both; }
+    #soon[hidden] { display: none; }
+    .soon-word { position: relative; z-index: 2; margin: 0; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; line-height: 1;
+      font-size: min(17vw, 21vh); text-shadow: 0 6px 60px rgb(0 0 0 / .45); animation: soon-rise 1.3s var(--ease) .15s both; }
+    .soon-tape { position: absolute; z-index: 1; left: -12vw; right: -12vw; top: 74%; height: clamp(2.6rem, 6.5vh, 3.8rem); display: flex; align-items: center; overflow: hidden;
+      background: rgb(255 196 112); color: #12233a; transform: rotate(-6deg); box-shadow: 0 18px 50px -14px rgb(0 0 0 / .6);
+      animation: soon-tape 1.2s var(--ease) .3s both; }
+    .soon-track { display: flex; flex: none; width: max-content; font-weight: 900; text-transform: uppercase; letter-spacing: .22em; white-space: nowrap;
+      font-size: clamp(.85rem, 2.4vh, 1.15rem); animation: soon-run 28s linear infinite; will-change: transform; }
+    .soon-track span { padding: 0 1.1rem; }
+    @keyframes soon-in { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes soon-rise { from { opacity: 0; transform: translate3d(0, 4vh, 0) scale(.96); filter: blur(12px); } to { opacity: 1; transform: none; filter: none; } }
+    @keyframes soon-tape { from { opacity: 0; transform: translate3d(-8vw, 0, 0) rotate(-6deg); } to { opacity: 1; transform: rotate(-6deg); } }
+    @keyframes soon-run { to { transform: translate3d(-50%, 0, 0); } }
+    html[data-motion="off"] .soon-track, html[data-motion="off"] #soon, html[data-motion="off"] .soon-word, html[data-motion="off"] .soon-tape { animation: none; }
+    @media (prefers-reduced-motion: reduce) { .soon-track { animation: none; } }
+
+    /* Наклонные панели вместо плоской шапки дня */
+    .dayhead { position: relative; align-items: center; padding: 1.15rem 3.1rem 1.15rem 1.35rem; color: #fff; border-radius: .35rem 0 0 .35rem;
+      background: linear-gradient(105deg, rgb(var(--accent2)) 0%, rgb(var(--strong)) 100%);
+      clip-path: polygon(0 0, 100% 0, calc(100% - 1.9rem) 100%, 0 100%);
+      box-shadow: inset 0 1px 0 rgb(255 255 255 / .22); }
+    .dayhead h2 { font-size: clamp(1.45rem, 5.4vw, 2.1rem); font-weight: 900; letter-spacing: .01em; text-transform: uppercase; line-height: 1.05; }
+    .dayhead .sub { color: rgb(255 255 255 / .82); font-weight: 600; letter-spacing: .02em; }
+    .dayhead .count, .dayhead .today-btn { background: rgb(0 0 0 / .22); border-color: rgb(255 255 255 / .28); color: #fff; }
+    .dayhead .badge { background: rgb(0 0 0 / .24); border-color: rgb(255 255 255 / .35); color: #fff; }
+    @media (min-width: 1024px) { .dayhead h2 { font-size: 2.3rem; } }
+    .eyebrow { letter-spacing: .24em; }
+    .pair-card { border-radius: .45rem 1.3rem .45rem 1.3rem; }
+    .pair-num { letter-spacing: .2em; }
+    .pair-name { font-weight: 800; }
+    .week, .days { border-radius: .6rem; }
+    .week-thumb { border-radius: .45rem; clip-path: polygon(0 0, 100% 0, calc(100% - .55rem) 100%, 0 100%); }
+    .week button { border-radius: .45rem; text-transform: uppercase; letter-spacing: .06em; font-size: .78rem; }
+    @media (max-width: 480px) { .week .wk { display: none; } }
   </style>
 </head>
 <body>
@@ -825,24 +951,35 @@ a.download-option:hover { transform:translateY(-2px); border-color:rgba(34,197,9
     </section>
   </div>
 
-  <!-- Выбор группы -->
+  <!-- Главный экран: выбор группы на фоне колледжа -->
   <div id="group-menu" class="overlay" role="dialog" aria-modal="true" aria-labelledby="group-menu-title">
     <div id="group-scrim" class="scrim"></div>
+    <div class="gm-stage" aria-hidden="true">
+      <div class="gm-zoom"><img class="gm-photo" src="college.jpg" alt="" decoding="async" onload="this.classList.add('is-loaded')"><div class="gm-shade"></div></div>
+      <div class="gm-wash"></div>
+    </div>
     <div class="sheet gm-sheet">
-      <div class="grabber"></div>
       <div class="gm-head">
-        <span class="eyebrow">Расписание занятий</span>
+        <span class="eyebrow">Машиностроительный колледж</span>
+        <div class="gm-word" aria-hidden="true"><span>Распи</span><span>сание</span></div>
         <h2 id="group-menu-title" class="gm-title" tabindex="-1">Какая у тебя группа?</h2>
         <p id="gm-sub" class="gm-sub">Выбери курс и группу — выбор запомнится на этом устройстве</p>
       </div>
-      <div id="course-seg" class="seg gm-seg" role="group" aria-label="Курс">
-        <button type="button" data-course="1" aria-pressed="false">1 курс</button>
-        <button type="button" data-course="2" aria-pressed="true">2 курс</button>
-        <button type="button" data-course="3" aria-pressed="false">3 курс</button>
+      <div class="gm-pick">
+        <div id="course-seg" class="seg gm-seg" role="group" aria-label="Курс">
+          <button type="button" data-course="1" aria-pressed="false">1 курс</button>
+          <button type="button" data-course="2" aria-pressed="true">2 курс</button>
+          <button type="button" data-course="3" aria-pressed="false">3 курс</button>
+        </div>
+        <div id="group-list" class="gm-list"></div>
       </div>
-      <div id="group-list" class="gm-list"></div>
-      <p class="gm-foot">Этот вопрос появляется только один раз. Поменять группу потом можно в шапке расписания или в настройках.</p>
     </div>
+  </div>
+
+  <!-- СКОРО: накрывает главный экран. Чтобы убрать, поставьте SOON_MODE = false внизу файла -->
+  <div id="soon" role="dialog" aria-modal="true" aria-label="Скоро">
+    <h2 class="soon-word">Скоро</h2>
+    <div class="soon-tape" aria-hidden="true"><div class="soon-track"><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span><span>Coming soon</span><span>✦</span></div></div>
   </div>
 
   <!-- Настройки -->
@@ -868,6 +1005,10 @@ a.download-option:hover { transform:translateY(-2px); border-color:rgba(34,197,9
           <div class="row">
             <div class="row-text"><div class="row-title">Жидкое стекло</div><p class="row-desc">Размытие и прозрачность панелей, плавающий фон. Без него карточки плотные, а страница легче для слабых телефонов.</p></div>
             <button id="glass-switch" type="button" role="switch" aria-checked="true" aria-label="Жидкое стекло" data-setting="glass" class="switch"><span class="switch-knob"></span></button>
+          </div>
+          <div class="row">
+            <div class="row-text"><div class="row-title">Анимация входа</div><p class="row-desc">Приближение к двери колледжа после выбора группы. Выключите, чтобы расписание открывалось сразу.</p></div>
+            <button type="button" role="switch" aria-checked="true" aria-label="Анимация входа" data-setting="intro" class="switch"><span class="switch-knob"></span></button>
           </div>
           <div class="row">
             <div class="row-text"><div class="row-title">Анимации</div><p class="row-desc">Плавное появление карточек, пульсация и движение фона. Выключите, если интерфейс кажется тормозным.</p></div>
@@ -4013,6 +4154,7 @@ const SCHEDULE_KSK_24_3 = {
     // ===== Настройки =====
     const THEMES = [
       { id: 'auto',     name: 'Как в системе', bg: '#0d060a', c1: '#f472b6', c2: '#6366f1', auto: true },
+      { id: 'lantern',  name: 'Фонарь',   bg: '#060e1a', c1: '#ffc470', c2: '#8a5c34' },
       { id: 'sakura',   name: 'Сакура',   bg: '#10070e', c1: '#ff82be', c2: '#e11d5a' },
       { id: 'midnight', name: 'Полночь',  bg: '#070a18', c1: '#81a0ff', c2: '#22d3ee' },
       { id: 'ocean',    name: 'Океан',    bg: '#031116', c1: '#2dd4e6', c2: '#34d399' },
@@ -4026,9 +4168,9 @@ const SCHEDULE_KSK_24_3 = {
       { id: 'mint',     name: 'Мята',     bg: '#ebfaf4', c1: '#059669', c2: '#38bdf8', light: true }
     ];
     const mqLight = window.matchMedia ? window.matchMedia('(prefers-color-scheme: light)') : null;
-    const resolveTheme = (id) => id === 'auto' ? (mqLight && mqLight.matches ? 'cloud' : 'sakura') : id;
-    const DEFAULT_SETTINGS = { theme: 'sakura', glass: true, fontSize: 'md', motion: true, compact: false, teachers: true, rooms: true, askGroup: false, notify: false, fontFamily: 'custom' };
-    const BOOL_KEYS = ['glass', 'motion', 'compact', 'teachers', 'rooms', 'askGroup', 'notify'];
+    const resolveTheme = (id) => id === 'auto' ? (mqLight && mqLight.matches ? 'cloud' : 'lantern') : id;
+    const DEFAULT_SETTINGS = { theme: 'lantern', glass: true, intro: true, fontSize: 'md', motion: true, compact: false, teachers: true, rooms: true, askGroup: false, notify: false, fontFamily: 'custom' };
+    const BOOL_KEYS = ['glass', 'intro', 'motion', 'compact', 'teachers', 'rooms', 'askGroup', 'notify'];
     let settings = { ...DEFAULT_SETTINGS };
 
     function loadSettings() {
@@ -4049,6 +4191,7 @@ const SCHEDULE_KSK_24_3 = {
       root.dataset.glass = settings.glass ? 'on' : 'off';
       root.dataset.fs = settings.fontSize;
       root.dataset.motion = settings.motion ? 'on' : 'off';
+      root.dataset.intro = settings.intro ? 'on' : 'off';
       root.dataset.compact = settings.compact ? 'on' : 'off';
       root.dataset.teachers = settings.teachers ? 'on' : 'off';
       root.dataset.rooms = settings.rooms ? 'on' : 'off';
@@ -4185,27 +4328,71 @@ const SCHEDULE_KSK_24_3 = {
       $('group-menu-title').textContent = asking ? 'Какая у тебя группа?' : 'Заменить группу';
       $('gm-sub').textContent = asking ? 'Выбери курс и группу — выбор запомнится на этом устройстве' : 'Выбери новую группу — прежняя заменится';
       renderGroupMenu();
-      $('group-menu').classList.add('open');
-      document.documentElement.classList.add('modal-open');
+      const menu = $('group-menu');
+      const wasOpen = menu.classList.contains('open');
+      menu.classList.add('open');
+      document.documentElement.classList.add('gm-open', 'modal-open');
       setBackgroundInert(true);
+      if (!wasOpen && menuAnimated()) {
+        // Плавное открытие: стартуем «от двери» и отпускаем на следующих кадрах
+        menu.classList.remove('is-entering');
+        menu.classList.add('is-opening');
+        setDoorOrigin();
+        void menu.offsetWidth;
+        requestAnimationFrame(() => requestAnimationFrame(() => menu.classList.remove('is-opening')));
+      }
       const first = document.querySelector('#group-list .gm-btn') || document.querySelector('#course-seg button[aria-pressed="true"]');
       // Пока группа не выбрана, фокус на заголовке, чтобы ни одна группа не выглядела выбранной
       if (!loadGroupId()) $('group-menu-title').focus();
       else if (first) first.focus();
     }
+    function menuAnimated() {
+      const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+      return settings.intro && settings.motion && !reduce;
+    }
     function hideGroupMenu() {
-      $('group-menu').classList.remove('open');
-      document.documentElement.classList.remove('modal-open');
+      $('group-menu').classList.remove('open', 'is-opening', 'is-entering');
+      document.documentElement.classList.remove('modal-open', 'gm-open', 'gm-entering');
       setBackgroundInert(false);
       if (lastFocus && document.contains(lastFocus)) lastFocus.focus();
     }
+    // Точка, к которой «приближается» камера: дверь колледжа на фото (500, 540 из 1000×667)
+    function setDoorOrigin() {
+      const menu = $('group-menu'), img = menu.querySelector('.gm-photo');
+      const W = menu.clientWidth, H = menu.clientHeight;
+      const boxH = img ? img.clientHeight || H : H;
+      const sc = Math.max(W / 1000, boxH / 667);
+      const x = (W - 1000 * sc) * 0.5 + 498 * sc;
+      const y = (boxH - 667 * sc) * 0.8 + 540 * sc;
+      menu.style.setProperty('--ox', x.toFixed(0) + 'px');
+      menu.style.setProperty('--oy', y.toFixed(0) + 'px');
+    }
+    let entering = false;
+    // Закрытие без выбора (Esc): экран плавно растворяется, расписание проявляется
+    function closeGroupMenuSoft() {
+      const menu = $('group-menu');
+      if (!menuAnimated() || entering) { hideGroupMenu(); return; }
+      entering = true;
+      document.documentElement.classList.remove('gm-open');
+      menu.classList.add('is-opening');
+      setTimeout(() => { hideGroupMenu(); entering = false; }, 700);
+    }
     function selectGroup(id) {
+      if (entering) return;
       applyGroup(id);
       saveGroupId(id);
-      hideGroupMenu();
       refreshReal();
       const t = nowTarget();
       goTo(t.week, t.day, 0, true);
+      const menu = $('group-menu');
+      if (!menuAnimated() || !menu.classList.contains('open')) { hideGroupMenu(); return; }
+      entering = true;
+      menu.classList.remove('is-opening');
+      setDoorOrigin();
+      document.documentElement.classList.add('gm-entering');
+      document.activeElement && document.activeElement.blur && document.activeElement.blur();
+      menu.classList.add('is-entering');
+      setTimeout(() => { hideGroupMenu(); entering = false; }, 2000);
     }
 
     // ===== Запуск =====
@@ -4223,19 +4410,20 @@ const SCHEDULE_KSK_24_3 = {
       $('btn-bottom').addEventListener('click', () => setWeek('bottom'));
       $('today-btn').addEventListener('click', goToday);
       $('change-group-btn').addEventListener('click', showGroupMenu);
-      $('group-scrim').addEventListener('click', () => { if (loadGroupId()) hideGroupMenu(); });
+      $('group-scrim').addEventListener('click', () => { if (loadGroupId()) closeGroupMenuSoft(); });
       document.querySelectorAll('#course-seg button').forEach((b) => b.addEventListener('click', () => {
         menuCourse = Number(b.dataset.course);
         renderGroupMenu();
       }));
       if (!savedGroup || ALWAYS_SHOW_MENU || settings.askGroup) showGroupMenu();
+      else document.documentElement.classList.remove('gm-open');
 
       // Клавиатура: Esc закрывает окна, стрелки листают дни
       document.addEventListener('keydown', (e) => {
         const settingsOpen = isOpen('settings-overlay'), groupOpen = isOpen('group-menu');
         if (e.key === 'Escape') {
           if (settingsOpen) closeSettings();
-          else if (groupOpen && loadGroupId()) hideGroupMenu();
+          else if (groupOpen && loadGroupId()) closeGroupMenuSoft();
           return;
         }
         if (e.key === 'Tab') {
@@ -4394,5 +4582,15 @@ const SCHEDULE_KSK_24_3 = {
     })();
   </script>
 
+  <script>
+  /* Режим «Скоро»: true — поверх главного экрана лента и надпись, false — сайт работает как обычно */
+  var SOON_MODE = true;
+  (function () {
+    var el = document.getElementById('soon');
+    if (!el) return;
+    if (!SOON_MODE) { el.remove(); return; }
+    ['group-menu', 'app'].forEach(function (id) { var n = document.getElementById(id); if (n) n.setAttribute('inert', ''); });
+  })();
+  </script>
 </body>
   </html>
