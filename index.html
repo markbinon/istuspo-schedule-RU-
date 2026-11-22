@@ -33,6 +33,7 @@
         if (typeof st.theme === 'string' && /^[a-z]+$/.test(st.theme)) t = st.theme;
         if (st.glass === false) g = 'off';
         if (st.intro === false) it = 'off';
+        if (st.askGroup === true) r.classList.add('gm-open');
         if (st.fontSize === 'sm' || st.fontSize === 'lg') f = st.fontSize;
         if (st.motion === false) m = 'off';
         if (st.compact === true) c = 'on';
@@ -41,6 +42,7 @@
         if (st.fontFamily === 'system') ff = 'system';
       } catch (e) {}
       if (t === 'auto') t = (window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches) ? 'cloud' : 'lantern';
+      try { if (!localStorage.getItem('ksk-group')) r.classList.add('gm-open'); } catch (e) { r.classList.add('gm-open'); }
       r.dataset.theme = t; r.dataset.intro = it; r.dataset.glass = g; r.dataset.fs = f; r.dataset.motion = m;
       r.dataset.compact = c; r.dataset.teachers = te; r.dataset.rooms = ro; r.dataset.ff = ff;
     })();
@@ -659,23 +661,24 @@ a.download-option:hover { transform:translateY(-2px); border-color:rgba(34,197,9
        Анимация входа запускается нажатием на группу (не прокруткой)
        ===================================================== */
     #group-menu { --text: 236 245 250; --line: 255 255 255 / .16; --accent: 255 196 112; --strong: 176 116 62; --accent2: 138 92 52;
-      color-scheme: dark; color: #fff; z-index: 2000; padding: 0; align-items: stretch; justify-content: stretch; background: rgb(6 14 26); overflow: hidden; }
+      color-scheme: dark; color: #fff; z-index: 2000; padding: 0; align-items: stretch; justify-content: stretch; background: rgb(6 14 26); overflow: hidden;
+      transition: opacity .6s ease; }
     #group-menu .scrim { display: none; }
     .gm-stage { position: absolute; inset: 0; overflow: hidden; }
-    .gm-zoom { position: absolute; inset: 0; transform-origin: var(--ox, 50%) var(--oy, 80%); will-change: transform; transition: transform 1.7s cubic-bezier(.62, 0, .3, 1); }
+    .gm-zoom { position: absolute; inset: 0; transform-origin: var(--ox, 50%) var(--oy, 80%); will-change: transform; backface-visibility: hidden; transition: transform 1.7s cubic-bezier(.2, .7, .15, 1); }
     .gm-photo { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 80%; opacity: 0;
       transition: opacity 1s ease; animation: gm-kb 20s ease-in-out infinite alternate; will-change: transform; }
     .gm-photo.is-loaded { opacity: 1; }
     @keyframes gm-kb { from { transform: scale(1); } to { transform: scale(1.06); } }
     .gm-shade { position: absolute; inset: 0; pointer-events: none;
       background: linear-gradient(180deg, rgb(6 14 26 / .84) 0%, rgb(6 14 26 / .4) 28%, rgb(6 14 26 / .12) 52%, rgb(6 14 26 / .8) 100%); }
-    .gm-wash { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .75s ease .55s;
+    .gm-wash { position: absolute; inset: 0; pointer-events: none; opacity: 0; will-change: opacity; transition: opacity 1s ease .1s;
       background: radial-gradient(circle at var(--ox, 50%) var(--oy, 80%), #fff6dc 0%, #ffd590 24%, rgb(232 160 80 / .9) 50%, rgb(120 70 30 / .5) 85%); }
     #group-menu .gm-sheet { position: relative; z-index: 2; width: 100%; max-width: none; height: 100%; max-height: none; margin: 0; overflow: hidden;
       padding: calc(1.25rem + env(safe-area-inset-top, 0px)) calc(1.1rem + env(safe-area-inset-right, 0px)) calc(1.1rem + env(safe-area-inset-bottom, 0px)) calc(1.1rem + env(safe-area-inset-left, 0px));
       display: flex; flex-direction: column; justify-content: space-between; gap: 1rem;
       background: none; border: 0; box-shadow: none; border-radius: 0; animation: none; -webkit-backdrop-filter: none; backdrop-filter: none;
-      transition: opacity .5s ease, transform .7s var(--ease); }
+      transition: opacity .8s ease .65s, transform 1s var(--ease) .65s; }
     #group-menu .grabber { display: none; }
     #group-menu .gm-head { text-align: left; padding: 0; text-shadow: 0 2px 24px rgb(0 0 0 / .5); }
     #group-menu .eyebrow { color: rgb(255 214 150); }
@@ -711,18 +714,22 @@ a.download-option:hover { transform:translateY(-2px); border-color:rgba(34,197,9
       #group-menu .gm-sheet { flex-direction: row; align-items: center; gap: 1.5rem; }
       .gm-word { font-size: 9vw; } .gm-pick { width: 22rem; flex: none; } #group-menu .gm-list { max-height: 50dvh; }
     }
-    /* Вход: приближение к двери колледжа, вспышка света, переход в расписание */
-    #group-menu.is-entering { pointer-events: none; opacity: 0; transition: opacity .55s ease 1.25s; }
-    #group-menu.is-entering .gm-zoom { transform: scale(3.2); }
-    #group-menu.is-entering .gm-wash { opacity: 1; }
-    #group-menu.is-entering .gm-sheet { opacity: 0; transform: translateY(18px); }
+    /* Открытие экрана выбора: камера «отъезжает» от двери, свет гаснет, появляется панель */
+    #group-menu.is-opening { opacity: 0; }
+    #group-menu.is-opening .gm-zoom { transform: scale(3.2); }
+    #group-menu.is-opening .gm-wash { opacity: 1; }
+    #group-menu.is-opening .gm-sheet { opacity: 0; transform: translateY(18px); transition-delay: 0s; }
+    /* Вход в расписание: приближение к двери, вспышка света, плавное растворение в расписание */
+    #group-menu.is-entering { pointer-events: none; opacity: 0; transition: opacity .6s ease 1.25s; }
+    #group-menu.is-entering .gm-zoom { transform: scale(3.2); transition: transform 1.75s cubic-bezier(.7, 0, .2, 1); }
+    #group-menu.is-entering .gm-wash { opacity: 1; transition: opacity .8s ease .55s; }
+    #group-menu.is-entering .gm-sheet { opacity: 0; transform: translateY(18px); transition: opacity .45s ease, transform .6s var(--ease); }
     html[data-motion="off"] .gm-photo { animation: none; }
     @media (prefers-reduced-motion: reduce) { .gm-photo { animation: none; } }
-    html:not([data-motion="off"]) #group-menu.open .gm-head > *, html:not([data-motion="off"]) #group-menu.open .gm-pick { animation: gm-in .9s var(--ease) backwards; }
-    html:not([data-motion="off"]) #group-menu.open .gm-word { animation-delay: .08s; }
-    html:not([data-motion="off"]) #group-menu.open .gm-title { animation-delay: .16s; }
-    html:not([data-motion="off"]) #group-menu.open .gm-pick { animation-delay: .24s; }
-    @keyframes gm-in { from { opacity: 0; transform: translate3d(0, 14px, 0); } to { opacity: 1; transform: none; } }
+    /* Само расписание проявляется под растворяющимся экраном выбора */
+    .app { transition: opacity .6s ease, transform .9s var(--ease); }
+    html.gm-open .app { opacity: 0; transform: scale(1.035) translateY(10px); }
+    html.gm-entering .app { opacity: 1; transform: none; transition: opacity .9s ease 1.15s, transform 1.2s var(--ease) 1.15s; }
 
     /* Наклонные панели вместо плоской шапки дня */
     .dayhead { position: relative; align-items: center; padding: 1.15rem 3.1rem 1.15rem 1.35rem; color: #fff; border-radius: .35rem 0 0 .35rem;
@@ -4292,17 +4299,31 @@ const SCHEDULE_KSK_24_3 = {
       $('group-menu-title').textContent = asking ? 'Какая у тебя группа?' : 'Заменить группу';
       $('gm-sub').textContent = asking ? 'Выбери курс и группу — выбор запомнится на этом устройстве' : 'Выбери новую группу — прежняя заменится';
       renderGroupMenu();
-      $('group-menu').classList.add('open');
-      document.documentElement.classList.add('modal-open');
+      const menu = $('group-menu');
+      const wasOpen = menu.classList.contains('open');
+      menu.classList.add('open');
+      document.documentElement.classList.add('gm-open', 'modal-open');
       setBackgroundInert(true);
+      if (!wasOpen && menuAnimated()) {
+        // Плавное открытие: стартуем «от двери» и отпускаем на следующих кадрах
+        menu.classList.remove('is-entering');
+        menu.classList.add('is-opening');
+        setDoorOrigin();
+        void menu.offsetWidth;
+        requestAnimationFrame(() => requestAnimationFrame(() => menu.classList.remove('is-opening')));
+      }
       const first = document.querySelector('#group-list .gm-btn') || document.querySelector('#course-seg button[aria-pressed="true"]');
       // Пока группа не выбрана, фокус на заголовке, чтобы ни одна группа не выглядела выбранной
       if (!loadGroupId()) $('group-menu-title').focus();
       else if (first) first.focus();
     }
+    function menuAnimated() {
+      const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+      return settings.intro && settings.motion && !reduce;
+    }
     function hideGroupMenu() {
-      $('group-menu').classList.remove('open');
-      document.documentElement.classList.remove('modal-open');
+      $('group-menu').classList.remove('open', 'is-opening', 'is-entering');
+      document.documentElement.classList.remove('modal-open', 'gm-open', 'gm-entering');
       setBackgroundInert(false);
       if (lastFocus && document.contains(lastFocus)) lastFocus.focus();
     }
@@ -4318,6 +4339,15 @@ const SCHEDULE_KSK_24_3 = {
       menu.style.setProperty('--oy', y.toFixed(0) + 'px');
     }
     let entering = false;
+    // Закрытие без выбора (Esc): экран плавно растворяется, расписание проявляется
+    function closeGroupMenuSoft() {
+      const menu = $('group-menu');
+      if (!menuAnimated() || entering) { hideGroupMenu(); return; }
+      entering = true;
+      document.documentElement.classList.remove('gm-open');
+      menu.classList.add('is-opening');
+      setTimeout(() => { hideGroupMenu(); entering = false; }, 700);
+    }
     function selectGroup(id) {
       if (entering) return;
       applyGroup(id);
@@ -4326,13 +4356,14 @@ const SCHEDULE_KSK_24_3 = {
       const t = nowTarget();
       goTo(t.week, t.day, 0, true);
       const menu = $('group-menu');
-      const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-      if (!settings.intro || !settings.motion || reduce || !menu.classList.contains('open')) { hideGroupMenu(); return; }
+      if (!menuAnimated() || !menu.classList.contains('open')) { hideGroupMenu(); return; }
       entering = true;
+      menu.classList.remove('is-opening');
       setDoorOrigin();
+      document.documentElement.classList.add('gm-entering');
       document.activeElement && document.activeElement.blur && document.activeElement.blur();
       menu.classList.add('is-entering');
-      setTimeout(() => { hideGroupMenu(); menu.classList.remove('is-entering'); entering = false; }, 1850);
+      setTimeout(() => { hideGroupMenu(); entering = false; }, 2000);
     }
 
     // ===== Запуск =====
@@ -4350,19 +4381,20 @@ const SCHEDULE_KSK_24_3 = {
       $('btn-bottom').addEventListener('click', () => setWeek('bottom'));
       $('today-btn').addEventListener('click', goToday);
       $('change-group-btn').addEventListener('click', showGroupMenu);
-      $('group-scrim').addEventListener('click', () => { if (loadGroupId()) hideGroupMenu(); });
+      $('group-scrim').addEventListener('click', () => { if (loadGroupId()) closeGroupMenuSoft(); });
       document.querySelectorAll('#course-seg button').forEach((b) => b.addEventListener('click', () => {
         menuCourse = Number(b.dataset.course);
         renderGroupMenu();
       }));
       if (!savedGroup || ALWAYS_SHOW_MENU || settings.askGroup) showGroupMenu();
+      else document.documentElement.classList.remove('gm-open');
 
       // Клавиатура: Esc закрывает окна, стрелки листают дни
       document.addEventListener('keydown', (e) => {
         const settingsOpen = isOpen('settings-overlay'), groupOpen = isOpen('group-menu');
         if (e.key === 'Escape') {
           if (settingsOpen) closeSettings();
-          else if (groupOpen && loadGroupId()) hideGroupMenu();
+          else if (groupOpen && loadGroupId()) closeGroupMenuSoft();
           return;
         }
         if (e.key === 'Tab') {
