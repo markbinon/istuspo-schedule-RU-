@@ -1,11 +1,15 @@
 
-var CACHE = 'schedule-v4';
+var CACHE = 'schedule-v5';
 
 var SHELL = [
   '/',
   '/index.html',
   '/college.jpg',
   '/manifest.webmanifest',
+  '/app-config.js',
+  '/app-pwa.js',
+  '/app-update.js',
+  '/app-notify.js',
   '/icons/icon-192.png',
   '/icons/apple-touch-icon.png'
 ];

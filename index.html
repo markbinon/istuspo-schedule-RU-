@@ -4,6 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Расписание СПО МСК</title>
+  <meta name="description" content="Расписание занятий и замены для групп СПО МСК: 1, 2 и 3 курс. Верхняя и нижняя неделя, звонки, уведомления о заменах.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Расписание СПО МСК">
+  <meta property="og:description" content="Расписание занятий и замены для групп СПО МСК.">
+  <meta property="og:locale" content="ru_RU">
   <meta name="theme-color" content="#060e1a">
   <meta name="color-scheme" content="dark light">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -13,17 +18,12 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23db2777'/%3E%3Cpath d='M9 12h14M9 17h14M9 22h8' stroke='white' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
   <!-- Веб-приложение (PWA): установка на экран «Домой» на iPhone и в браузерах -->
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="preload" as="image" href="college.jpg">
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
   <script src="app-pwa.js" defer></script>
   <!-- Android-приложение: адрес API, проверка обновлений, кнопка «Назад» (в браузере ничего не делают) -->
   <script src="app-config.js"></script>
   <script src="app-update.js" defer></script>
   <script src="app-notify.js" defer></script>
-  <script>
-    window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
-  </script>
-  <script defer src="/_vercel/speed-insights/script.js"></script>
   <script>
     /* Применяем сохранённые настройки до первой отрисовки, чтобы не было мигания */
     (function () {
@@ -43,6 +43,9 @@
       } catch (e) {}
       if (t === 'auto') t = (window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches) ? 'cloud' : 'lantern';
       try { if (!localStorage.getItem('ksk-group')) r.classList.add('gm-open'); } catch (e) { r.classList.add('gm-open'); }
+      if (r.classList.contains('gm-open')) {
+        try { var pl = document.createElement('link'); pl.rel = 'preload'; pl.as = 'image'; pl.href = 'college.jpg'; document.head.appendChild(pl); } catch (e) {}
+      }
       r.dataset.theme = t; r.dataset.intro = it; r.dataset.glass = g; r.dataset.fs = f; r.dataset.motion = m;
       r.dataset.compact = c; r.dataset.teachers = te; r.dataset.rooms = ro; r.dataset.ff = ff;
     })();
@@ -731,7 +734,14 @@ a.download-option:hover { transform:translateY(-2px); border-color:rgba(34,197,9
     html.gm-open .app { opacity: 0; transform: scale(1.035) translateY(10px); }
     html.gm-entering .app { opacity: 1; transform: none; transition: opacity .9s ease 1.15s, transform 1.2s var(--ease) 1.15s; }
 
-    .gm-note { margin: .7rem .2rem 0; font-size: .66rem; line-height: 1.4; color: rgb(255 255 255 / .55); text-align: center; flex: none; }
+    .gm-note { margin: .7rem .2rem 0; font-size: .7rem; line-height: 1.4; color: rgb(255 255 255 / .72); text-align: center; flex: none; }
+    /* Запасной фон, пока фото грузится или не загрузилось (медленная сеть, офлайн) */
+    .gm-stage { background: radial-gradient(120% 80% at 50% 78%, rgb(40 90 140 / .55) 0%, rgb(14 30 52) 55%, rgb(6 14 26) 100%); }
+    /* Без «жидкого стекла» панель плотная и без размытия: легче для слабых телефонов */
+    html[data-glass="off"] .gm-pick { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgb(8 18 34 / .92); }
+    @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .gm-pick { background: rgb(8 18 34 / .88); } }
+    /* Фокус с клавиатуры виден на тёмном фоне главного экрана */
+    #group-menu .gm-btn:focus-visible, #group-menu .seg button:focus-visible { outline: 2px solid rgb(255 214 150); outline-offset: 2px; }
 
     /* Наклонные панели вместо плоской шапки дня */
     .dayhead { position: relative; align-items: center; padding: 1.15rem 3.1rem 1.15rem 1.35rem; color: #fff; border-radius: .35rem 0 0 .35rem;
@@ -4557,6 +4567,17 @@ const SCHEDULE_KSK_24_3 = {
     })();
   </script>
 
+  <script>
+  /* Страховка: если экран выбора группы так и не открылся (ошибка скрипта), не оставляем расписание скрытым */
+  (function () {
+    function reveal() {
+      var m = document.getElementById('group-menu');
+      if (!m || !m.classList.contains('open')) document.documentElement.classList.remove('gm-open');
+    }
+    if (document.readyState === 'complete') setTimeout(reveal, 3000);
+    else window.addEventListener('load', function () { setTimeout(reveal, 3000); });
+  })();
+  </script>
   <script>
   /* Режим «Скоро»: true — поверх главного экрана лента и надпись, false — сайт работает как обычно */
   var SOON_MODE = false;
