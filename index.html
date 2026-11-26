@@ -735,6 +735,23 @@ a.download-option:hover { transform:translateY(-2px); border-color:rgba(34,197,9
     html.gm-entering .app { opacity: 1; transform: none; transition: opacity .9s ease 1.15s, transform 1.2s var(--ease) 1.15s; }
 
     .gm-note { margin: .7rem .2rem 0; font-size: .7rem; line-height: 1.4; color: rgb(255 255 255 / .72); text-align: center; flex: none; }
+    /* Читаемость подписей на светлом фото: тень у текста и затемнение слева на ПК */
+    #group-menu .gm-title, #group-menu .gm-sub, #group-menu .eyebrow { text-shadow: 0 1px 2px rgb(0 0 0 / .65), 0 2px 18px rgb(0 0 0 / .7); }
+    #group-menu .gm-sub { color: #fff; }
+    @media (min-aspect-ratio: 1/1) and (min-width: 900px) {
+      .gm-shade { background:
+        linear-gradient(90deg, rgb(6 14 26 / .82) 0%, rgb(6 14 26 / .5) 34%, rgb(6 14 26 / .08) 60%, rgb(6 14 26 / .3) 100%),
+        linear-gradient(180deg, rgb(6 14 26 / .45) 0%, rgb(6 14 26 / 0) 30%, rgb(6 14 26 / .6) 100%); }
+    }
+    /* Телефон: карточки групп компактнее, в списке видно больше, внизу плавное затухание как подсказка прокрутки */
+    @media (max-aspect-ratio: 1/1) {
+      #group-menu .gm-list { max-height: 36vh; max-height: 36dvh;
+        -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 1.6rem), transparent 100%); mask-image: linear-gradient(180deg, #000 calc(100% - 1.6rem), transparent 100%);
+        padding-bottom: 1.2rem; }
+      #group-menu .gm-btn { padding: .55rem 1rem .55rem 1.15rem; }
+      #group-menu .gm-name { font-size: 1.05rem; }
+      #group-menu .gm-meta { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; overflow: hidden; font-size: .78rem; }
+    }
     /* Запасной фон, пока фото грузится или не загрузилось (медленная сеть, офлайн) */
     .gm-stage { background: radial-gradient(120% 80% at 50% 78%, rgb(40 90 140 / .55) 0%, rgb(14 30 52) 55%, rgb(6 14 26) 100%); }
     /* Без «жидкого стекла» панель плотная и без размытия: легче для слабых телефонов */
@@ -744,12 +761,12 @@ a.download-option:hover { transform:translateY(-2px); border-color:rgba(34,197,9
     #group-menu .gm-btn:focus-visible, #group-menu .seg button:focus-visible { outline: 2px solid rgb(255 214 150); outline-offset: 2px; }
 
     /* Наклонные панели вместо плоской шапки дня */
-    .dayhead { position: relative; align-items: center; padding: 1.15rem 3.1rem 1.15rem 1.35rem; color: #fff; border-radius: .35rem 0 0 .35rem;
+    .dayhead { position: relative; align-items: center; padding: .95rem 2.2rem .95rem 1.2rem; gap: .4rem; color: #fff; border-radius: .35rem 0 0 .35rem;
       background: linear-gradient(105deg, rgb(var(--accent2)) 0%, rgb(var(--strong)) 100%);
       clip-path: polygon(0 0, 100% 0, calc(100% - 1.9rem) 100%, 0 100%);
       box-shadow: inset 0 1px 0 rgb(255 255 255 / .22); }
     .dayhead h2 { font-size: clamp(1.45rem, 5.4vw, 2.1rem); font-weight: 900; letter-spacing: .01em; text-transform: uppercase; line-height: 1.05; }
-    .dayhead .sub { color: rgb(255 255 255 / .82); font-weight: 600; letter-spacing: .02em; }
+    .dayhead .sub { color: rgb(255 255 255 / .86); font-weight: 600; letter-spacing: 0; font-size: .74rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .dayhead .count, .dayhead .today-btn { background: rgb(0 0 0 / .22); border-color: rgb(255 255 255 / .28); color: #fff; }
     .dayhead .badge { background: rgb(0 0 0 / .24); border-color: rgb(255 255 255 / .35); color: #fff; }
     @media (min-width: 1024px) { .dayhead h2 { font-size: 2.3rem; } }
