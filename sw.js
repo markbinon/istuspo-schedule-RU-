@@ -1,10 +1,14 @@
 
-var CACHE = 'schedule-v2';
+var CACHE = 'schedule-v3';
 
 var SHELL = [
   '/',
   '/index.html',
   '/manifest.webmanifest',
+  '/app-config.js',
+  '/app-pwa.js',
+  '/app-update.js',
+  '/app-notify.js',
   '/icons/icon-192.png',
   '/icons/apple-touch-icon.png'
 ];
