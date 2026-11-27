@@ -668,15 +668,13 @@ a.download-option:hover { transform:translateY(-2px); border-color:rgba(34,197,9
       transition: opacity .6s ease; }
     #group-menu .scrim { display: none; }
     .gm-stage { position: absolute; inset: 0; overflow: hidden; }
-    .gm-zoom { position: absolute; inset: 0; transform-origin: var(--ox, 50%) var(--oy, 80%); will-change: transform; backface-visibility: hidden; transition: transform 1.7s cubic-bezier(.2, .7, .15, 1); }
+    .gm-zoom { position: absolute; inset: 0; transform-origin: var(--ox, 50%) var(--oy, 80%); will-change: transform; backface-visibility: hidden; transition: transform .7s cubic-bezier(.2, .7, .2, 1); }
     .gm-photo { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 80%; opacity: 0;
       transition: opacity 1s ease; animation: gm-kb 20s ease-in-out infinite alternate; will-change: transform; }
     .gm-photo.is-loaded { opacity: 1; }
     @keyframes gm-kb { from { transform: scale(1); } to { transform: scale(1.06); } }
     .gm-shade { position: absolute; inset: 0; pointer-events: none;
       background: linear-gradient(180deg, rgb(6 14 26 / .84) 0%, rgb(6 14 26 / .4) 28%, rgb(6 14 26 / .12) 52%, rgb(6 14 26 / .8) 100%); }
-    .gm-wash { position: absolute; inset: 0; pointer-events: none; opacity: 0; will-change: opacity; transition: opacity 1s ease .1s;
-      background: radial-gradient(circle at var(--ox, 50%) var(--oy, 80%), #fff6dc 0%, #ffd590 24%, rgb(232 160 80 / .9) 50%, rgb(120 70 30 / .5) 85%); }
     #group-menu .gm-sheet { position: relative; z-index: 2; width: 100%; max-width: none; height: 100%; max-height: none; margin: 0; overflow: hidden;
       padding: calc(1.25rem + env(safe-area-inset-top, 0px)) calc(1.1rem + env(safe-area-inset-right, 0px)) calc(1.1rem + env(safe-area-inset-bottom, 0px)) calc(1.1rem + env(safe-area-inset-left, 0px));
       display: flex; flex-direction: column; justify-content: space-between; gap: 1rem;
@@ -717,43 +715,22 @@ a.download-option:hover { transform:translateY(-2px); border-color:rgba(34,197,9
       #group-menu .gm-sheet { flex-direction: row; align-items: center; gap: 1.5rem; }
       .gm-word { font-size: 9vw; } .gm-pick { width: 22rem; flex: none; } #group-menu .gm-list { max-height: 50dvh; }
     }
-    /* Открытие экрана выбора: камера «отъезжает» от двери, свет гаснет, появляется панель */
+    /* Открытие экрана выбора: плавное появление с лёгким отдалением фото */
     #group-menu.is-opening { opacity: 0; }
-    #group-menu.is-opening .gm-zoom { transform: scale(3.2); }
-    #group-menu.is-opening .gm-wash { opacity: 1; }
-    #group-menu.is-opening .gm-sheet { opacity: 0; transform: translateY(18px); transition-delay: 0s; }
-    /* Вход в расписание: камера въезжает в дверь, из неё льётся тёплый свет, затем расписание проявляется по очереди */
-    #group-menu.is-entering { pointer-events: none; opacity: 0; transition: opacity .75s cubic-bezier(.4, 0, .2, 1) 1.3s; }
-    #group-menu.is-entering .gm-zoom { transform: scale(3.4); transition: transform 1.8s cubic-bezier(.55, 0, .2, 1); }
-    #group-menu.is-entering .gm-photo { filter: brightness(1.18) saturate(1.1); transition: filter 1.4s ease .2s; }
-    #group-menu.is-entering .gm-wash { opacity: 1; transition: opacity .85s cubic-bezier(.3, 0, .3, 1) .5s; }
-    /* Панель уходит вниз, заголовок вверх: сцена освобождается для кадра с дверью */
-    #group-menu.is-entering .gm-sheet { opacity: 0; transition: opacity .4s ease; }
-    #group-menu.is-entering .gm-pick { transform: translateY(26px) scale(.97); transition: transform .55s cubic-bezier(.4, 0, .2, 1); }
-    #group-menu.is-entering .gm-head { transform: translateY(-14px); transition: transform .55s cubic-bezier(.4, 0, .2, 1); }
+    #group-menu.is-opening .gm-zoom { transform: scale(1.06); }
+    #group-menu.is-opening .gm-sheet { opacity: 0; transform: translateY(12px); transition-delay: 0s; }
+    /* Вход в расписание: экран выбора мягко растворяется, расписание плавно появляется */
+    #group-menu.is-entering { pointer-events: none; opacity: 0; transition: opacity .5s ease .1s; }
+    #group-menu.is-entering .gm-zoom { transform: scale(1.06); transition: transform .7s ease-out; }
+    #group-menu.is-entering .gm-sheet { opacity: 0; transform: translateY(10px); transition: opacity .3s ease, transform .4s ease; }
     html[data-motion="off"] .gm-photo { animation: none; }
     @media (prefers-reduced-motion: reduce) { .gm-photo { animation: none; } }
     /* Само расписание проявляется под растворяющимся экраном выбора */
     .app { transition: opacity .6s ease, transform .9s var(--ease); }
     html.gm-open .app { opacity: 0; transform: scale(1.035) translateY(10px); }
-    /* Под экраном выбора расписание уже на месте, а блоки появляются каскадом, когда свет рассеивается */
-    html.gm-entering .app { opacity: 1; transform: none; transition: none; }
-    @keyframes gm-in { from { opacity: 0; transform: translate3d(0, 24px, 0) scale(.985); } to { opacity: 1; transform: none; } }
-    @keyframes gm-in-side { from { opacity: 0; transform: translate3d(46px, 0, 0); } to { opacity: 1; transform: none; } }
-    html.gm-entering .app .brand, html.gm-entering #week-seg, html.gm-entering #days-nav, html.gm-entering #download-app-trigger,
-    html.gm-entering #repl-note, html.gm-entering #hero, html.gm-entering .foot,
-    html.gm-entering .timeline > * { animation: gm-in .85s cubic-bezier(.2, .8, .2, 1) both !important; }
-    html.gm-entering .app .brand { animation-delay: 1.25s !important; }
-    html.gm-entering #week-seg { animation-delay: 1.33s !important; }
-    html.gm-entering #days-nav { animation-delay: 1.41s !important; }
-    html.gm-entering #download-app-trigger { animation-delay: 1.49s !important; }
-    html.gm-entering .dayhead { animation: gm-in-side .9s cubic-bezier(.2, .8, .2, 1) 1.45s both !important; }
-    html.gm-entering #repl-note, html.gm-entering #hero { animation-delay: 1.62s !important; }
-    html.gm-entering .timeline > :nth-child(1) { animation-delay: 1.72s !important; }
-    html.gm-entering .timeline > :nth-child(2) { animation-delay: 1.80s !important; }
-    html.gm-entering .timeline > :nth-child(3) { animation-delay: 1.88s !important; }
-    html.gm-entering .timeline > :nth-child(4) { animation-delay: 1.96s !important; }
-    html.gm-entering .timeline > :nth-child(n+5), html.gm-entering .foot { animation-delay: 2.05s !important; }
+    /* Расписание плавно проявляется под растворяющимся экраном выбора */
+    @keyframes gm-in { from { opacity: 0; transform: translate3d(0, 12px, 0); } to { opacity: 1; transform: none; } }
+    html.gm-entering .app { opacity: 1; transform: none; transition: none; animation: gm-in .55s ease .15s both; }
 
     .gm-note { margin: .7rem .2rem 0; font-size: .7rem; line-height: 1.4; color: rgb(255 255 255 / .72); text-align: center; flex: none; }
     /* Читаемость подписей на светлом фото: тень у текста и затемнение слева на ПК */
@@ -983,7 +960,6 @@ a.download-option:hover { transform:translateY(-2px); border-color:rgba(34,197,9
     <div id="group-scrim" class="scrim"></div>
     <div class="gm-stage" aria-hidden="true">
       <div class="gm-zoom"><img class="gm-photo" src="college.jpg" alt="" decoding="async" onload="this.classList.add('is-loaded')"><div class="gm-shade"></div></div>
-      <div class="gm-wash"></div>
     </div>
     <div class="sheet gm-sheet">
       <div class="gm-head">
@@ -4418,8 +4394,8 @@ const SCHEDULE_KSK_24_3 = {
       document.activeElement && document.activeElement.blur && document.activeElement.blur();
       menu.classList.add('is-entering');
       // Экран выбора убираем, когда он уже прозрачен; класс каскада держим, пока не доиграют все анимации
-      setTimeout(() => { hideGroupMenu(true); entering = false; }, 2100);
-      setTimeout(() => { document.documentElement.classList.remove('gm-entering'); }, 3300);
+      setTimeout(() => { hideGroupMenu(true); entering = false; }, 750);
+      setTimeout(() => { document.documentElement.classList.remove('gm-entering'); }, 850);
     }
 
     // ===== Запуск =====
