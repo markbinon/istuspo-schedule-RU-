@@ -722,17 +722,38 @@ a.download-option:hover { transform:translateY(-2px); border-color:rgba(34,197,9
     #group-menu.is-opening .gm-zoom { transform: scale(3.2); }
     #group-menu.is-opening .gm-wash { opacity: 1; }
     #group-menu.is-opening .gm-sheet { opacity: 0; transform: translateY(18px); transition-delay: 0s; }
-    /* Вход в расписание: приближение к двери, вспышка света, плавное растворение в расписание */
-    #group-menu.is-entering { pointer-events: none; opacity: 0; transition: opacity .6s ease 1.25s; }
-    #group-menu.is-entering .gm-zoom { transform: scale(3.2); transition: transform 1.75s cubic-bezier(.7, 0, .2, 1); }
-    #group-menu.is-entering .gm-wash { opacity: 1; transition: opacity .8s ease .55s; }
-    #group-menu.is-entering .gm-sheet { opacity: 0; transform: translateY(18px); transition: opacity .45s ease, transform .6s var(--ease); }
+    /* Вход в расписание: камера въезжает в дверь, из неё льётся тёплый свет, затем расписание проявляется по очереди */
+    #group-menu.is-entering { pointer-events: none; opacity: 0; transition: opacity .75s cubic-bezier(.4, 0, .2, 1) 1.3s; }
+    #group-menu.is-entering .gm-zoom { transform: scale(3.4); transition: transform 1.8s cubic-bezier(.55, 0, .2, 1); }
+    #group-menu.is-entering .gm-photo { filter: brightness(1.18) saturate(1.1); transition: filter 1.4s ease .2s; }
+    #group-menu.is-entering .gm-wash { opacity: 1; transition: opacity .85s cubic-bezier(.3, 0, .3, 1) .5s; }
+    /* Панель уходит вниз, заголовок вверх: сцена освобождается для кадра с дверью */
+    #group-menu.is-entering .gm-sheet { opacity: 0; transition: opacity .4s ease; }
+    #group-menu.is-entering .gm-pick { transform: translateY(26px) scale(.97); transition: transform .55s cubic-bezier(.4, 0, .2, 1); }
+    #group-menu.is-entering .gm-head { transform: translateY(-14px); transition: transform .55s cubic-bezier(.4, 0, .2, 1); }
     html[data-motion="off"] .gm-photo { animation: none; }
     @media (prefers-reduced-motion: reduce) { .gm-photo { animation: none; } }
     /* Само расписание проявляется под растворяющимся экраном выбора */
     .app { transition: opacity .6s ease, transform .9s var(--ease); }
     html.gm-open .app { opacity: 0; transform: scale(1.035) translateY(10px); }
-    html.gm-entering .app { opacity: 1; transform: none; transition: opacity .9s ease 1.15s, transform 1.2s var(--ease) 1.15s; }
+    /* Под экраном выбора расписание уже на месте, а блоки появляются каскадом, когда свет рассеивается */
+    html.gm-entering .app { opacity: 1; transform: none; transition: none; }
+    @keyframes gm-in { from { opacity: 0; transform: translate3d(0, 24px, 0) scale(.985); } to { opacity: 1; transform: none; } }
+    @keyframes gm-in-side { from { opacity: 0; transform: translate3d(46px, 0, 0); } to { opacity: 1; transform: none; } }
+    html.gm-entering .app .brand, html.gm-entering #week-seg, html.gm-entering #days-nav, html.gm-entering #download-app-trigger,
+    html.gm-entering #repl-note, html.gm-entering #hero, html.gm-entering .foot,
+    html.gm-entering .timeline > * { animation: gm-in .85s cubic-bezier(.2, .8, .2, 1) both !important; }
+    html.gm-entering .app .brand { animation-delay: 1.25s !important; }
+    html.gm-entering #week-seg { animation-delay: 1.33s !important; }
+    html.gm-entering #days-nav { animation-delay: 1.41s !important; }
+    html.gm-entering #download-app-trigger { animation-delay: 1.49s !important; }
+    html.gm-entering .dayhead { animation: gm-in-side .9s cubic-bezier(.2, .8, .2, 1) 1.45s both !important; }
+    html.gm-entering #repl-note, html.gm-entering #hero { animation-delay: 1.62s !important; }
+    html.gm-entering .timeline > :nth-child(1) { animation-delay: 1.72s !important; }
+    html.gm-entering .timeline > :nth-child(2) { animation-delay: 1.80s !important; }
+    html.gm-entering .timeline > :nth-child(3) { animation-delay: 1.88s !important; }
+    html.gm-entering .timeline > :nth-child(4) { animation-delay: 1.96s !important; }
+    html.gm-entering .timeline > :nth-child(n+5), html.gm-entering .foot { animation-delay: 2.05s !important; }
 
     .gm-note { margin: .7rem .2rem 0; font-size: .7rem; line-height: 1.4; color: rgb(255 255 255 / .72); text-align: center; flex: none; }
     /* Читаемость подписей на светлом фото: тень у текста и затемнение слева на ПК */
@@ -4333,6 +4354,7 @@ const SCHEDULE_KSK_24_3 = {
       const menu = $('group-menu');
       const wasOpen = menu.classList.contains('open');
       menu.classList.add('open');
+      document.documentElement.classList.remove('gm-entering');
       document.documentElement.classList.add('gm-open', 'modal-open');
       setBackgroundInert(true);
       if (!wasOpen && menuAnimated()) {
@@ -4352,9 +4374,10 @@ const SCHEDULE_KSK_24_3 = {
       const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
       return settings.intro && settings.motion && !reduce;
     }
-    function hideGroupMenu() {
+    function hideGroupMenu(keepCascade) {
       $('group-menu').classList.remove('open', 'is-opening', 'is-entering');
-      document.documentElement.classList.remove('modal-open', 'gm-open', 'gm-entering');
+      document.documentElement.classList.remove('modal-open', 'gm-open');
+      if (!keepCascade) document.documentElement.classList.remove('gm-entering');
       setBackgroundInert(false);
       if (lastFocus && document.contains(lastFocus)) lastFocus.focus();
     }
@@ -4394,7 +4417,9 @@ const SCHEDULE_KSK_24_3 = {
       document.documentElement.classList.add('gm-entering');
       document.activeElement && document.activeElement.blur && document.activeElement.blur();
       menu.classList.add('is-entering');
-      setTimeout(() => { hideGroupMenu(); entering = false; }, 2000);
+      // Экран выбора убираем, когда он уже прозрачен; класс каскада держим, пока не доиграют все анимации
+      setTimeout(() => { hideGroupMenu(true); entering = false; }, 2100);
+      setTimeout(() => { document.documentElement.classList.remove('gm-entering'); }, 3300);
     }
 
     // ===== Запуск =====
