@@ -773,7 +773,9 @@ a.download-option:hover { transform:translateY(-2px); border-color:rgba(34,197,9
     .pair-num { letter-spacing: .2em; }
     .pair-name { font-weight: 800; }
     .week, .days { border-radius: .6rem; }
-    .week-thumb { border-radius: .45rem; clip-path: polygon(0 0, 100% 0, calc(100% - .55rem) 100%, 0 100%); }
+    .week-thumb { border-radius: .45rem; clip-path: polygon(0 0, 100% 0, calc(100% - .55rem) 100%, 0 100%); transition: transform .55s var(--ease), clip-path .55s var(--ease); }
+    /* Нижняя неделя: косой срез с левой стороны, параллельно срезу верхней, правый край прямой */
+    .week[data-week="bottom"] .week-thumb { clip-path: polygon(.55rem 0, 100% 0, 100% 100%, 0 100%); }
     .week button { border-radius: .45rem; text-transform: uppercase; letter-spacing: .06em; font-size: .78rem; }
     @media (max-width: 480px) { .week .wk { display: none; } }
   </style>

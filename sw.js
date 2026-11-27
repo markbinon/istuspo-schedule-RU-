@@ -1,5 +1,5 @@
 
-var CACHE = 'schedule-v8';
+var CACHE = 'schedule-v9';
 
 var SHELL = [
   '/',
